@@ -1,0 +1,466 @@
+/**
+ * Ars Nova Singers Portal — front-end styles.
+ * Mobile-first, theme-friendly (inherits Kadence typography where possible).
+ */
+
+.ansp-portal {
+	--ansp-accent: #1d3557;
+	--ansp-accent-soft: #eef2f8;
+	--ansp-border: #dfe3ea;
+	--ansp-radius: 10px;
+	max-width: 72rem;
+	margin: 0 auto;
+	padding: 0.5rem 0 3rem;
+}
+
+/* ---------- Header ---------- */
+.ansp-portal-header {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 0.5rem;
+	margin-bottom: 1rem;
+}
+.ansp-portal-title { margin: 0; }
+.ansp-portal-welcome { margin: 0; font-size: 0.95em; opacity: 0.85; }
+.ansp-logout { margin-left: 0.75em; }
+
+/* ---------- Notices ---------- */
+.ansp-notice {
+	padding: 0.75rem 1rem;
+	border-radius: var(--ansp-radius);
+	margin: 0 0 1rem;
+	border: 1px solid var(--ansp-border);
+}
+.ansp-notice--success { background: #eaf7ef; border-color: #bfe5cc; }
+.ansp-notice--error { background: #fdeeee; border-color: #f0c4c4; }
+
+/* ---------- Tabs ---------- */
+.ansp-tabs {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.35rem;
+	border-bottom: 2px solid var(--ansp-border);
+	margin-bottom: 1.25rem;
+	padding-bottom: 0.35rem;
+}
+.ansp-tab {
+	appearance: none;
+	background: transparent;
+	border: 1px solid transparent;
+	border-radius: 999px;
+	padding: 0.45rem 0.9rem;
+	font: inherit;
+	font-size: 0.95em;
+	cursor: pointer;
+	color: inherit;
+	white-space: nowrap;
+}
+.ansp-tab:hover,
+.ansp-tab:focus-visible { background: var(--ansp-accent-soft); }
+.ansp-tab.is-active {
+	background: var(--ansp-accent);
+	color: #fff;
+}
+.ansp-tab-panel[hidden] { display: none; }
+
+/* ---------- Sub-tabs (Projects) ---------- */
+.ansp-subtab-nav {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.35rem;
+	margin: 0 0 1rem;
+}
+.ansp-subtab {
+	appearance: none;
+	background: var(--ansp-accent-soft);
+	border: 1px solid var(--ansp-border);
+	border-radius: 8px;
+	padding: 0.4rem 0.8rem;
+	font: inherit;
+	font-size: 0.9em;
+	cursor: pointer;
+}
+.ansp-subtab.is-active {
+	background: var(--ansp-accent);
+	border-color: var(--ansp-accent);
+	color: #fff;
+}
+.ansp-subtab-panel[hidden] { display: none; }
+
+/* ---------- Generic ---------- */
+.ansp-section-title { margin-top: 0; }
+.ansp-empty { opacity: 0.75; font-style: italic; }
+.ansp-badges { margin: 0.25rem 0; }
+.ansp-badge {
+	display: inline-block;
+	background: var(--ansp-accent-soft);
+	border: 1px solid var(--ansp-border);
+	border-radius: 999px;
+	padding: 0.1rem 0.6rem;
+	font-size: 0.78em;
+	margin-right: 0.25rem;
+}
+.ansp-btn {
+	display: inline-block;
+	background: var(--ansp-accent);
+	color: #fff !important;
+	border: 1px solid var(--ansp-accent);
+	border-radius: 8px;
+	padding: 0.55rem 1.1rem;
+	font: inherit;
+	text-decoration: none;
+	cursor: pointer;
+	line-height: 1.2;
+}
+.ansp-btn:hover, .ansp-btn:focus-visible { opacity: 0.9; }
+.ansp-btn--small { padding: 0.3rem 0.7rem; font-size: 0.85em; }
+.ansp-btn--ghost {
+	background: transparent;
+	color: var(--ansp-accent) !important;
+}
+
+/* ---------- Login card ---------- */
+.ansp-portal--login { display: flex; justify-content: center; padding: 2rem 1rem; }
+.ansp-login-card {
+	width: 100%;
+	max-width: 26rem;
+	border: 1px solid var(--ansp-border);
+	border-radius: var(--ansp-radius);
+	padding: 1.5rem;
+	box-shadow: 0 8px 24px rgba(29, 53, 87, 0.08);
+}
+.ansp-login-title { margin: 0 0 0.25rem; }
+.ansp-login-sub { margin: 0 0 1rem; opacity: 0.8; font-size: 0.95em; }
+.ansp-login-card input[type="text"],
+.ansp-login-card input[type="password"] {
+	width: 100%;
+	padding: 0.55rem 0.7rem;
+	border: 1px solid var(--ansp-border);
+	border-radius: 8px;
+}
+.ansp-login-card .login-submit input {
+	background: var(--ansp-accent);
+	color: #fff;
+	border: 0;
+	border-radius: 8px;
+	padding: 0.6rem 1.2rem;
+	cursor: pointer;
+}
+.ansp-login-lost { margin: 0.75rem 0 0; font-size: 0.9em; }
+
+/* ---------- Announcements ---------- */
+.ansp-announcements { list-style: none; margin: 0; padding: 0; }
+.ansp-announcement {
+	border: 1px solid var(--ansp-border);
+	border-radius: var(--ansp-radius);
+	padding: 1rem 1.25rem;
+	margin-bottom: 1rem;
+}
+.ansp-announcement-head {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	gap: 0.5rem;
+	align-items: baseline;
+}
+.ansp-announcement-title { margin: 0; }
+.ansp-announcement-date { font-size: 0.85em; opacity: 0.7; }
+.ansp-announcement-body > :last-child { margin-bottom: 0; }
+
+/* ---------- Bio form ---------- */
+.ansp-bio-form { max-width: 40rem; }
+.ansp-field { display: block; margin-bottom: 1rem; }
+.ansp-field-label { display: block; font-weight: 600; margin-bottom: 0.25rem; }
+.ansp-field-label em { color: #b3261e; font-style: normal; }
+.ansp-bio-form input[type="text"],
+.ansp-bio-form input[type="email"],
+.ansp-bio-form input[type="tel"],
+.ansp-bio-form input[type="url"],
+.ansp-bio-form input[type="number"],
+.ansp-bio-form textarea {
+	width: 100%;
+	padding: 0.55rem 0.7rem;
+	border: 1px solid var(--ansp-border);
+	border-radius: 8px;
+	font: inherit;
+}
+.ansp-privacy-toggle {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+	font-size: 0.85em;
+	opacity: 0.85;
+	margin-top: 0.25rem;
+}
+.ansp-bio-headshot {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	margin-bottom: 1.25rem;
+	flex-wrap: wrap;
+}
+.ansp-headshot {
+	width: 96px;
+	height: 96px;
+	object-fit: cover;
+	border-radius: 50%;
+	border: 2px solid var(--ansp-border);
+}
+.ansp-headshot--placeholder { background: var(--ansp-accent-soft); }
+
+/* ---------- Roster ---------- */
+.ansp-roster-grid {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 1rem;
+}
+@media (min-width: 600px) {
+	.ansp-roster-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (min-width: 960px) {
+	.ansp-roster-grid { grid-template-columns: repeat(3, 1fr); }
+}
+.ansp-roster-card {
+	border: 1px solid var(--ansp-border);
+	border-radius: var(--ansp-radius);
+	padding: 1.25rem;
+	text-align: center;
+}
+.ansp-roster-photo {
+	width: 110px;
+	height: 110px;
+	object-fit: cover;
+	border-radius: 50%;
+	margin: 0 auto 0.6rem;
+	display: block;
+	border: 2px solid var(--ansp-border);
+}
+.ansp-roster-photo--placeholder {
+	background: var(--ansp-accent-soft);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 2rem;
+	color: var(--ansp-accent);
+}
+.ansp-roster-name { margin: 0 0 0.25rem; }
+.ansp-roster-fields { margin: 0.6rem 0 0; text-align: left; font-size: 0.92em; }
+.ansp-roster-field { margin-bottom: 0.4rem; }
+.ansp-roster-field dt { font-weight: 600; display: inline; }
+.ansp-roster-field dt::after { content: ": "; }
+.ansp-roster-field dd { display: inline; margin: 0; }
+
+/* ---------- Calendar ---------- */
+.ansp-calendar-block { margin-bottom: 2rem; }
+.ansp-calendar-head {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	align-items: center;
+	gap: 0.5rem;
+	margin-bottom: 0.5rem;
+}
+.ansp-calendar-title { margin: 0; }
+.ansp-embed--calendar {
+	position: relative;
+	padding-top: 75%;
+	border: 1px solid var(--ansp-border);
+	border-radius: var(--ansp-radius);
+	overflow: hidden;
+}
+@media (min-width: 720px) {
+	.ansp-embed--calendar { padding-top: 60%; }
+}
+.ansp-embed--calendar iframe {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	border: 0;
+}
+
+/* ---------- Tag filter (v1.2.0) ---------- */
+.ansp-tagfilter {
+	margin: 1rem 0 0;
+	padding: 0.75rem 1rem;
+	border: 1px solid var(--ansp-border);
+	border-radius: var(--ansp-radius);
+}
+.ansp-tagfilter-legend {
+	font-size: 0.85em;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	padding: 0 0.35rem;
+}
+.ansp-tagfilter-bulk { margin-bottom: 0.5rem; }
+.ansp-tagfilter-bulk .ansp-btn { margin-right: 0.4rem; }
+.ansp-tagfilter-options {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.4rem;
+}
+.ansp-tagfilter-option {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+	border: 1px solid var(--ansp-border);
+	border-radius: 999px;
+	padding: 0.2rem 0.7rem;
+	font-size: 0.85em;
+	cursor: pointer;
+	user-select: none;
+}
+.ansp-tagfilter-option:has(input:checked) {
+	background: var(--ansp-accent-soft);
+	border-color: var(--ansp-accent);
+}
+.ansp-tagfilter-option:focus-within {
+	outline: 2px solid var(--ansp-accent);
+	outline-offset: 1px;
+}
+.ansp-tagfilter-option input { margin: 0; }
+.ansp-tagfilter-empty[hidden] { display: none; }
+
+/* ---------- Material tag chips (v1.2.0) ---------- */
+.ansp-material-tags {
+	list-style: none;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.3rem;
+	margin: 0 0 0.5rem;
+	padding: 0;
+}
+.ansp-tag-chip {
+	display: inline-block;
+	background: var(--ansp-accent-soft);
+	border: 1px solid var(--ansp-border);
+	border-radius: 999px;
+	padding: 0.1rem 0.6rem;
+	font-size: 0.75em;
+}
+.ansp-material.is-filtered-out,
+.ansp-material[hidden] { display: none; }
+
+/* ---------- Materials ---------- */
+.ansp-materials {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 1rem;
+	margin-top: 1rem;
+}
+@media (min-width: 860px) {
+	.ansp-materials { grid-template-columns: repeat(2, 1fr); }
+}
+.ansp-material {
+	border: 1px solid var(--ansp-border);
+	border-radius: var(--ansp-radius);
+	padding: 1rem 1.25rem;
+}
+.ansp-material-head { margin-bottom: 0.5rem; }
+.ansp-material-type {
+	display: inline-block;
+	font-size: 0.72em;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	background: var(--ansp-accent-soft);
+	border-radius: 999px;
+	padding: 0.1rem 0.6rem;
+	margin-bottom: 0.3rem;
+}
+.ansp-material-title { margin: 0; font-size: 1.05em; }
+.ansp-material-note { font-size: 0.9em; opacity: 0.8; margin: 0 0 0.5rem; }
+.ansp-embed--drive,
+.ansp-embed--video {
+	position: relative;
+	padding-top: 66%;
+	border-radius: 8px;
+	overflow: hidden;
+	background: #f4f5f7;
+	margin-bottom: 0.6rem;
+}
+.ansp-embed--drive iframe,
+.ansp-embed--video iframe,
+.ansp-embed--video video {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	border: 0;
+}
+.ansp-material-image img {
+	max-width: 100%;
+	height: auto;
+	border-radius: 8px;
+	display: block;
+}
+.ansp-material-audio audio { width: 100%; }
+.ansp-material-actions { margin: 0.4rem 0 0; }
+
+/* ---------- Project meta + RSVP ---------- */
+.ansp-project-meta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75rem;
+	align-items: center;
+	margin-bottom: 0.75rem;
+	font-size: 0.95em;
+}
+.ansp-project-venue::before { content: "· "; opacity: 0.5; }
+.ansp-project-description { margin-bottom: 0.75rem; }
+.ansp-rsvp-form {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.6rem;
+	border: 1px dashed var(--ansp-border);
+	border-radius: var(--ansp-radius);
+	padding: 0.7rem 1rem;
+	margin-bottom: 1rem;
+}
+.ansp-rsvp-label { font-weight: 600; }
+.ansp-rsvp-options { display: inline-flex; gap: 0.75rem; }
+.ansp-rsvp-option { display: inline-flex; align-items: center; gap: 0.25rem; }
+.ansp-rsvp-current { font-size: 0.85em; opacity: 0.75; }
+
+/* ---------- Past projects ---------- */
+.ansp-past-project {
+	border: 1px solid var(--ansp-border);
+	border-radius: var(--ansp-radius);
+	padding: 0.75rem 1.1rem;
+	margin-bottom: 0.75rem;
+}
+.ansp-past-project summary {
+	cursor: pointer;
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	gap: 0.5rem;
+	font-weight: 600;
+}
+.ansp-past-meta { font-weight: 400; font-size: 0.9em; opacity: 0.8; display: inline-flex; gap: 0.6rem; align-items: center; }
+
+/* ---- "Compose with AI" bio helper (v1.1.0) ------------------------------ */
+.ansp-ai-compose {
+	margin: 0.5rem 0 0.75rem;
+	padding: 0.75rem;
+	border: 1px dashed var(--ansp-accent-soft, #d7dcec);
+	border-radius: 6px;
+}
+.ansp-ai-status { margin-left: 0.5rem; font-size: 0.9em; color: #6b7280; }
+.ansp-ai-status.is-error { color: #b91c1c; }
+.ansp-ai-spinner {
+	display: inline-block;
+	width: 0.9em;
+	height: 0.9em;
+	margin-right: 0.35em;
+	border: 2px solid currentColor;
+	border-top-color: transparent;
+	border-radius: 50%;
+	vertical-align: -0.1em;
+	animation: ansp-spin 0.7s linear infinite;
+}
+@keyframes ansp-spin { to { transform: rotate(360deg); } }
+.ansp-field--parts .ansp-inline-check { display: inline-block; margin: 0 0.75rem 0.25rem 0; }

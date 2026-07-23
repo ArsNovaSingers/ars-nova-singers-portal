@@ -1,0 +1,93 @@
+/**
+ * Ars Nova Singers Portal — admin styles
+ * (materials meta box, dashboard cards, forms).
+ */
+
+/* ---------- Materials repeater ---------- */
+.ansp-materials-table { margin-top: 8px; }
+.ansp-materials-table th,
+.ansp-materials-table td { vertical-align: top; padding: 10px; }
+.ansp-materials-table .ansp-col-type { width: 130px; }
+.ansp-materials-table .ansp-col-tags { width: 320px; }
+.ansp-materials-table .ansp-col-actions { width: 70px; text-align: right; }
+.ansp-material-row input.widefat { margin-bottom: 6px; }
+.ansp-remove-material { color: #b32d2e; cursor: pointer; }
+
+/* ---- Tags chips input (v1.2.0) ------------------------------------------ */
+/* When JS enhances the field, the canonical comma-separated input is hidden
+   (it still submits) and the chip entry box takes its place. */
+.ansp-tags-field.is-enhanced .ansp-tags-input { display: none; }
+.ansp-tags-chips { margin-bottom: 4px; }
+.ansp-admin-tag-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	margin: 0 6px 6px 0;
+	padding: 2px 8px;
+	background: #f0f0f1;
+	border: 1px solid #c3c4c7;
+	border-radius: 999px;
+	font-size: 12px;
+	line-height: 1.6;
+}
+.ansp-admin-tag-remove {
+	border: 0;
+	background: none;
+	padding: 0 2px;
+	color: #b32d2e;
+	font-size: 14px;
+	line-height: 1;
+	cursor: pointer;
+}
+.ansp-admin-tag-remove:hover,
+.ansp-admin-tag-remove:focus { color: #8a2424; }
+.ansp-tags-hint {
+	display: block;
+	margin-top: 2px;
+	font-size: 11px;
+	color: #646970;
+}
+
+/* ---------- Dashboard cards ---------- */
+.ansp-cards {
+	display: grid;
+	grid-template-columns: repeat( auto-fill, minmax( 170px, 1fr ) );
+	gap: 14px;
+	margin: 18px 0 24px;
+	max-width: 1100px;
+}
+.ansp-card {
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 8px;
+	padding: 16px;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+.ansp-card-count { font-size: 28px; font-weight: 700; line-height: 1; }
+.ansp-card-label { color: #50575e; }
+.ansp-card-link { margin-top: 6px; }
+
+.ansp-quick-links li { margin-bottom: 6px; }
+
+/* ---------- Shared admin form touches ---------- */
+.ansp-inline-check { display: inline-block; margin-right: 14px; }
+.ansp-privacy-toggle { display: block; margin-top: 4px; color: #50575e; }
+.ansp-project-meta input[type="date"] { min-width: 160px; }
+
+/* ---------- Generic admin tabs (data-ansp-admin-tabs) ---------- */
+.ansp-admin-tabs .ansp-admin-tab-panel { display: none; padding-top: 12px; }
+.ansp-admin-tabs .ansp-admin-tab-panel.is-active { display: block; }
+
+
+/* v1.2.0 — Materials "Groups (who sees it)" gate column */
+.ansp-col-groups{width:170px;vertical-align:top}
+.ansp-groups-field{border:0;margin:0 0 4px;padding:0}
+.ansp-group-check{display:block;font-size:12px;line-height:1.7}
+.ansp-group-check input{margin-right:4px}
+
+/* v1.2.1 — "Open Google Drive" helper on materials */
+.ansp-drive-open{margin:4px 0 0}
+.ansp-drive-link{display:inline-flex;align-items:center;gap:5px;font-size:12px;text-decoration:none}
+.ansp-drive-ico{flex:0 0 auto}

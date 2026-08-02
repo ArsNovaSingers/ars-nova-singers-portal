@@ -514,12 +514,20 @@ class ANSP_Registration {
 			$codes = self::get_codes();
 
 			foreach ( array_keys( $codes ) as $key ) {
-				$regen = ! empty( $_POST[ 'regen_' . $key ] );
-				if ( $regen ) {
-					$codes[ $key ]['code'] = self::generate_code();
-					$codes[ $key ]['uses'] = 0;
-				} elseif ( isset( $_POST[ 'code_' . $key ] ) ) {
-					$codes[ $key ]['code'] = sanitize_text_field( wp_unslash( $_POST[ 'code_' . $key ] ) );
+				if ( isset( $_POST[ 'code_' . $key ] ) ) {
+					$new = sanitize_text_field( wp_unslash( $_POST[ 'code_' . $key ] ) );
+					/*
+					 * Changing the code retires the old one, so the use count
+					 * has to start again. Doing it automatically rather than
+					 * via a checkbox removes a way to get this wrong: a fresh
+					 * code inheriting an exhausted counter would refuse every
+					 * registration with "reached its limit", which is a
+					 * miserable thing to debug.
+					 */
+					if ( $new !== (string) $codes[ $key ]['code'] ) {
+						$codes[ $key ]['uses'] = 0;
+					}
+					$codes[ $key ]['code'] = $new;
 				}
 				$codes[ $key ]['enabled']  = ! empty( $_POST[ 'enabled_' . $key ] );
 				$codes[ $key ]['expires']  = isset( $_POST[ 'expires_' . $key ] ) ? sanitize_text_field( wp_unslash( $_POST[ 'expires_' . $key ] ) ) : '';
@@ -564,11 +572,13 @@ class ANSP_Registration {
 						<tr>
 							<th scope="row"><label for="code_<?php echo esc_attr( $key ); ?>"><?php esc_html_e( 'Code', 'ans-singers-portal' ); ?></label></th>
 							<td>
-								<input type="text" class="regular-text" id="code_<?php echo esc_attr( $key ); ?>" name="code_<?php echo esc_attr( $key ); ?>" value="<?php echo esc_attr( (string) $def['code'] ); ?>" />
-								<label style="margin-left:12px;">
-									<input type="checkbox" name="regen_<?php echo esc_attr( $key ); ?>" value="1" />
-									<?php esc_html_e( 'Regenerate (resets the use count)', 'ans-singers-portal' ); ?>
-								</label>
+								<input type="text" class="regular-text ansp-code-field" id="code_<?php echo esc_attr( $key ); ?>" name="code_<?php echo esc_attr( $key ); ?>" value="<?php echo esc_attr( (string) $def['code'] ); ?>" />
+								<button type="button" class="button ansp-generate" data-target="code_<?php echo esc_attr( $key ); ?>" style="margin-left:8px;">
+									<?php esc_html_e( 'Generate random code', 'ans-singers-portal' ); ?>
+								</button>
+								<p class="description">
+									<?php esc_html_e( 'Generating replaces the code in the box — nothing changes until you press Save. Saving a different code resets its use count and immediately stops the old one working.', 'ans-singers-portal' ); ?>
+								</p>
 							</td>
 						</tr>
 						<tr>
@@ -609,6 +619,42 @@ class ANSP_Registration {
 
 				<?php submit_button(); ?>
 			</form>
+
+			<script>
+			( function () {
+				// Same alphabet as ANSP_Registration::generate_code() — no 0/O
+				// or 1/I/L, because these get read aloud at rehearsal and typed
+				// off a printed sheet.
+				var ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+
+				function randomCode() {
+					var out = 'ANS-';
+					var bytes = new Uint32Array( 8 );
+					// crypto, not Math.random — this string is the only thing
+					// protecting the music library.
+					window.crypto.getRandomValues( bytes );
+					for ( var i = 0; i < 8; i++ ) {
+						if ( i === 4 ) {
+							out += '-';
+						}
+						out += ALPHABET.charAt( bytes[ i ] % ALPHABET.length );
+					}
+					return out;
+				}
+
+				document.querySelectorAll( '.ansp-generate' ).forEach( function ( button ) {
+					button.addEventListener( 'click', function () {
+						var field = document.getElementById( button.getAttribute( 'data-target' ) );
+						if ( ! field ) {
+							return;
+						}
+						field.value = randomCode();
+						field.focus();
+						field.select();
+					} );
+				} );
+			}() );
+			</script>
 
 			<h2><?php esc_html_e( 'Recent registrations', 'ans-singers-portal' ); ?></h2>
 			<?php if ( empty( $log ) || ! is_array( $log ) ) : ?>

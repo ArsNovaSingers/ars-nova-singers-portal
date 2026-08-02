@@ -418,6 +418,21 @@ class ANSP_Singer_Admin {
 		<style>
 			.column-ansp_qe_data { display: none !important; }
 			.ansp-qe-fieldset .title { font-weight: 600; }
+
+			/*
+			 * Strip the core Quick Edit fields that mean nothing on a singer
+			 * profile: Slug, Date, Author, and the Password / Private pair.
+			 *
+			 * HIDDEN, NOT REMOVED. These inputs still post their existing
+			 * values; deleting them from the DOM would submit nothing and let
+			 * WordPress blank the slug and date on every quick save.
+			 */
+			.inline-edit-row label:has( input[name="post_name"] ),
+			.inline-edit-row label:has( select[name="post_author"] ),
+			.inline-edit-row .inline-edit-date,
+			.inline-edit-row .inline-edit-group {
+				display: none !important;
+			}
 		</style>
 		<script>
 		( function () {
@@ -458,6 +473,22 @@ class ANSP_Singer_Admin {
 				if ( activeBox ) {
 					activeBox.checked = active;
 				}
+
+				/*
+				 * Belt and braces for the CSS above: :has() is unsupported on
+				 * older browsers, and a panel where half the clutter is hidden
+				 * looks more broken than one where none of it is.
+				 */
+				[ 'input[name="post_name"]', 'select[name="post_author"]' ].forEach( function ( sel ) {
+					var field = form.querySelector( sel );
+					var label = field ? field.closest( 'label' ) : null;
+					if ( label ) {
+						label.style.display = 'none';
+					}
+				} );
+				form.querySelectorAll( '.inline-edit-date, .inline-edit-group' ).forEach( function ( el ) {
+					el.style.display = 'none';
+				} );
 			};
 		}() );
 		</script>

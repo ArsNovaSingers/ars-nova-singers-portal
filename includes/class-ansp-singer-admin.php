@@ -198,9 +198,12 @@ class ANSP_Singer_Admin {
 	public static function columns( $columns ) {
 		unset( $columns['author'] );
 
-		if ( ! isset( $columns['ansp_groups'] ) ) {
-			$columns['ansp_groups'] = __( 'Groups', 'ans-singers-portal' );
-		}
+		/*
+		 * No Groups column is added here on purpose. The ans_group taxonomy is
+		 * registered with show_admin_column => true, so WordPress already
+		 * renders one (`taxonomy-ans_group`). Adding our own produced TWO
+		 * columns both headed "Groups", which is what shipped in v1.8.0.
+		 */
 
 		// Carries the Quick Edit payload; hidden with CSS, never shown.
 		$columns['ansp_qe_data'] = '';
@@ -216,16 +219,6 @@ class ANSP_Singer_Admin {
 	 * @return void
 	 */
 	public static function column_data( $column, $post_id ) {
-		if ( 'ansp_groups' === $column ) {
-			$terms = wp_get_object_terms( $post_id, 'ans_group', array( 'fields' => 'names' ) );
-			if ( is_wp_error( $terms ) || empty( $terms ) ) {
-				echo '<span style="color:#646970;">' . esc_html__( '—', 'ans-singers-portal' ) . '</span>';
-			} else {
-				echo esc_html( implode( ', ', $terms ) );
-			}
-			return;
-		}
-
 		if ( 'ansp_qe_data' !== $column ) {
 			return;
 		}

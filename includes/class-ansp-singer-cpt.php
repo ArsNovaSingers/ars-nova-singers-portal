@@ -69,6 +69,81 @@ function ansp_pronoun_suggestions() {
 }
 
 /**
+ * The year Ars Nova Singers was founded — the earliest sensible join year.
+ *
+ * @return int
+ */
+function ansp_founding_year() {
+	return 1986;
+}
+
+/**
+ * The year a singer joined, or 0 if unknown.
+ *
+ * @param int $profile_id Singer profile ID.
+ * @return int
+ */
+function ansp_get_year_joined( $profile_id ) {
+	$year = (int) get_post_meta( (int) $profile_id, 'year_joined', true );
+	return $year > 0 ? $year : 0;
+}
+
+/**
+ * Years with the group — CALCULATED from the join year.
+ *
+ * `years_with_group` used to be typed by hand, which meant every profile
+ * quietly became wrong on 1 January. It is now derived, and the old meta is
+ * kept in sync on save purely so anything still reading it stays correct.
+ *
+ * @param int $profile_id Singer profile ID.
+ * @return int
+ */
+function ansp_years_with_group( $profile_id ) {
+	$joined = ansp_get_year_joined( $profile_id );
+	if ( $joined > 0 ) {
+		return max( 0, (int) current_time( 'Y' ) - $joined );
+	}
+	// Fall back to the legacy hand-typed value until they set a join year.
+	return (int) get_post_meta( (int) $profile_id, 'years_with_group', true );
+}
+
+/**
+ * Fields a singer can choose to show or hide on the PUBLIC Singers page.
+ *
+ * Distinct from `ansp_privacy`, which controls visibility to the choir on the
+ * internal roster. Two different audiences, two different switches.
+ *
+ * @return array<string,string>
+ */
+function ansp_public_field_keys() {
+	return array(
+		'pronouns'       => __( 'Pronouns', 'ans-singers-portal' ),
+		'favorite_piece' => __( 'Favorite piece', 'ans-singers-portal' ),
+		'favorite_quote' => __( 'Favorite quote', 'ans-singers-portal' ),
+	);
+}
+
+/**
+ * Should this field appear on the public Singers page?
+ *
+ * ABSENT META MEANS VISIBLE. All 41 existing profiles already show pronouns
+ * publicly, so defaulting to hidden would silently strip them from the
+ * Singers page the moment this shipped. Hiding has to be a choice someone
+ * makes, not a side effect of a deploy.
+ *
+ * @param int    $profile_id Singer profile ID.
+ * @param string $key        Field key.
+ * @return bool
+ */
+function ansp_is_field_public( $profile_id, $key ) {
+	$flags = get_post_meta( (int) $profile_id, 'ansp_public', true );
+	if ( ! is_array( $flags ) || ! array_key_exists( $key, $flags ) ) {
+		return true;
+	}
+	return ! empty( $flags[ $key ] );
+}
+
+/**
  * Is the OLD standalone "Ars Nova Singer Directory" plugin still active?
  *
  * @return bool

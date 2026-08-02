@@ -40,7 +40,8 @@ endif;
 	$ansp_privacy    = ANSP_Profiles::get_privacy( $ansp_profile_id );
 	$ansp_headshot   = ANSP_Profiles::get_headshot_url( $ansp_profile_id );
 	$ansp_parts      = ANSP_Singer_CPT::get_parts( $ansp_profile_id );
-	$ansp_years      = get_post_meta( $ansp_profile_id, 'years_with_group', true );
+	$ansp_year_join  = ansp_get_year_joined( $ansp_profile_id );
+	$ansp_years      = ansp_years_with_group( $ansp_profile_id );
 	$ansp_fav        = (string) get_post_meta( $ansp_profile_id, 'favorite_piece', true );
 	$ansp_quote      = (string) get_post_meta( $ansp_profile_id, 'favorite_quote', true );
 	$ansp_pronouns   = (string) get_post_meta( $ansp_profile_id, 'pronouns', true );
@@ -79,8 +80,10 @@ endif;
 
 		<?php foreach ( ANSP_Profiles::fields() as $ansp_key => $ansp_field ) : ?>
 			<?php
-			$ansp_value    = ANSP_Profiles::get_field( $ansp_profile_id, $ansp_key );
-			$ansp_required = ( 'email' === $ansp_key );
+			$ansp_value = ANSP_Profiles::get_field( $ansp_profile_id, $ansp_key );
+			// Email and phone are both required — the roster is how Zahnay
+			// reaches people about rehearsals and payroll.
+			$ansp_required = in_array( $ansp_key, array( 'email', 'phone' ), true );
 			?>
 			<div class="ansp-field">
 				<label>
@@ -128,12 +131,38 @@ endif;
 				<input type="checkbox" name="ansp_privacy[pronouns]" value="1" <?php checked( ! empty( $ansp_privacy['pronouns'] ) ); ?> />
 				<?php esc_html_e( 'Visible to choir on the roster', 'ans-singers-portal' ); ?>
 			</label>
+			<label class="ansp-privacy-toggle ansp-public-toggle">
+				<input type="checkbox" name="ansp_public[pronouns]" value="1" <?php checked( ansp_is_field_public( $ansp_profile_id, 'pronouns' ) ); ?> />
+				<?php esc_html_e( 'Show on the public Singers page', 'ans-singers-portal' ); ?>
+			</label>
 		</div>
 
 		<div class="ansp-field">
 			<label>
-				<span class="ansp-field-label"><?php esc_html_e( 'Years with the group', 'ans-singers-portal' ); ?></span>
-				<input type="number" min="0" name="ans_years" value="<?php echo esc_attr( '' === $ansp_years ? '' : (string) absint( $ansp_years ) ); ?>" />
+				<span class="ansp-field-label"><?php esc_html_e( 'Year you started with Ars Nova', 'ans-singers-portal' ); ?> <em>*</em></span>
+				<input
+					type="number"
+					name="ansp_year_joined"
+					required
+					min="<?php echo esc_attr( (string) ansp_founding_year() ); ?>"
+					max="<?php echo esc_attr( current_time( 'Y' ) ); ?>"
+					step="1"
+					placeholder="<?php esc_attr_e( 'e.g. 2019', 'ans-singers-portal' ); ?>"
+					value="<?php echo esc_attr( $ansp_year_join > 0 ? (string) $ansp_year_join : '' ); ?>"
+				/>
+				<span class="ansp-field-hint">
+					<?php
+					if ( $ansp_year_join > 0 ) {
+						printf(
+							/* translators: %d: number of years */
+							esc_html__( 'That works out as %d years with the group — calculated automatically, so it never goes stale.', 'ans-singers-portal' ),
+							(int) $ansp_years
+						);
+					} else {
+						esc_html_e( 'Years with the group is worked out from this, so it stays correct every year.', 'ans-singers-portal' );
+					}
+					?>
+				</span>
 			</label>
 			<label class="ansp-privacy-toggle">
 				<input type="checkbox" name="ansp_privacy[years]" value="1" <?php checked( ! empty( $ansp_privacy['years'] ) ); ?> />
@@ -150,6 +179,10 @@ endif;
 				<input type="checkbox" name="ansp_privacy[favorite_piece]" value="1" <?php checked( ! empty( $ansp_privacy['favorite_piece'] ) ); ?> />
 				<?php esc_html_e( 'Visible to choir on the roster', 'ans-singers-portal' ); ?>
 			</label>
+			<label class="ansp-privacy-toggle ansp-public-toggle">
+				<input type="checkbox" name="ansp_public[favorite_piece]" value="1" <?php checked( ansp_is_field_public( $ansp_profile_id, 'favorite_piece' ) ); ?> />
+				<?php esc_html_e( 'Show on the public Singers page', 'ans-singers-portal' ); ?>
+			</label>
 		</div>
 
 		<div class="ansp-field">
@@ -161,12 +194,16 @@ endif;
 				<input type="checkbox" name="ansp_privacy[favorite_quote]" value="1" <?php checked( ! empty( $ansp_privacy['favorite_quote'] ) ); ?> />
 				<?php esc_html_e( 'Visible to choir on the roster', 'ans-singers-portal' ); ?>
 			</label>
+			<label class="ansp-privacy-toggle ansp-public-toggle">
+				<input type="checkbox" name="ansp_public[favorite_quote]" value="1" <?php checked( ansp_is_field_public( $ansp_profile_id, 'favorite_quote' ) ); ?> />
+				<?php esc_html_e( 'Show on the public Singers page', 'ans-singers-portal' ); ?>
+			</label>
 		</div>
 
 		<div class="ansp-field ansp-field--bio">
 			<label>
-				<span class="ansp-field-label"><?php esc_html_e( 'Bio', 'ans-singers-portal' ); ?></span>
-				<textarea id="ansp_bio" name="ansp_bio" rows="6"><?php echo esc_textarea( $ansp_bio_text ); ?></textarea>
+				<span class="ansp-field-label"><?php esc_html_e( 'Bio', 'ans-singers-portal' ); ?> <em>*</em></span>
+				<textarea id="ansp_bio" name="ansp_bio" rows="6" required><?php echo esc_textarea( $ansp_bio_text ); ?></textarea>
 			</label>
 
 			<div class="ansp-ai-compose">

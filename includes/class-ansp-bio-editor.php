@@ -87,7 +87,24 @@ class ANSP_Bio_Editor {
 			: array();
 		$parts     = array_values( array_intersect( ansp_voice_part_options(), $raw_parts ) );
 
-		if ( '' === $display_name || empty( $parts ) || ! is_email( $email ) ) {
+		$phone       = isset( $_POST['ansp_field_phone'] ) ? sanitize_text_field( wp_unslash( $_POST['ansp_field_phone'] ) ) : '';
+		$year_joined = isset( $_POST['ansp_year_joined'] ) ? absint( $_POST['ansp_year_joined'] ) : 0;
+		$bio_raw     = isset( $_POST['ansp_bio'] ) ? trim( (string) wp_unslash( $_POST['ansp_bio'] ) ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- checked for emptiness only; sanitised below.
+
+		/*
+		 * Server-side validation, not just the browser's `required`.
+		 * The HTML attribute is a convenience — anything can POST here.
+		 */
+		$year_ok = ( $year_joined >= ansp_founding_year() && $year_joined <= (int) current_time( 'Y' ) );
+
+		if (
+			'' === $display_name
+			|| empty( $parts )
+			|| ! is_email( $email )
+			|| '' === $phone
+			|| '' === wp_strip_all_tags( $bio_raw )
+			|| ! $year_ok
+		) {
 			$this->redirect( 'missing_required' );
 		}
 
@@ -104,12 +121,14 @@ class ANSP_Bio_Editor {
 		// ---- Canonical profile-detail meta (same keys as the admin box) ---
 		update_post_meta( $profile_id, 'parts', $parts );
 
-		$years_raw = isset( $_POST['ans_years'] ) ? trim( sanitize_text_field( wp_unslash( $_POST['ans_years'] ) ) ) : '';
-		if ( '' !== $years_raw ) {
-			update_post_meta( $profile_id, 'years_with_group', absint( $years_raw ) );
-		} else {
-			delete_post_meta( $profile_id, 'years_with_group' );
-		}
+		/*
+		 * Years with the group is CALCULATED from the join year, never typed.
+		 * `years_with_group` is still written so anything already reading it
+		 * (roster, public bio page, exports) keeps working — but it is now a
+		 * derived cache, and the join year is the source of truth.
+		 */
+		update_post_meta( $profile_id, 'year_joined', $year_joined );
+		update_post_meta( $profile_id, 'years_with_group', max( 0, (int) current_time( 'Y' ) - $year_joined ) );
 
 		$fav = isset( $_POST['ans_fav'] ) ? sanitize_text_field( wp_unslash( $_POST['ans_fav'] ) ) : '';
 		if ( '' !== $fav ) {
@@ -143,6 +162,17 @@ class ANSP_Bio_Editor {
 				delete_post_meta( $profile_id, 'ansp_' . $key );
 			}
 		}
+
+		// ---- Public-page visibility (separate from roster privacy) --------
+		$public_raw   = isset( $_POST['ansp_public'] ) ? (array) wp_unslash( $_POST['ansp_public'] ) : array(); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- keys checked against a whitelist below.
+		$public_flags = array();
+		foreach ( array_keys( ansp_public_field_keys() ) as $public_key ) {
+			// Unticked boxes are absent from POST, so record an explicit
+			// false rather than leaving the key out — ansp_is_field_public()
+			// treats a missing key as "visible".
+			$public_flags[ $public_key ] = ! empty( $public_raw[ $public_key ] );
+		}
+		update_post_meta( $profile_id, 'ansp_public', $public_flags );
 
 		// ---- Privacy toggles (full set — this form renders every toggle) --
 		update_post_meta(

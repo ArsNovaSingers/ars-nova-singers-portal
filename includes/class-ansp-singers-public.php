@@ -315,7 +315,12 @@ class ANSP_Singers_Public {
 		echo '<div class="ans-singers ans-singers--cols-' . esc_attr( (string) $columns ) . '">';
 
 		foreach ( $singers as $singer ) {
-			$pronouns   = (string) get_post_meta( $singer->ID, 'pronouns', true );
+			// Respect the singer's own "Show on the public Singers page"
+			// choice. Absent meta means visible, so existing profiles are
+			// unaffected until someone actively opts out.
+			$pronouns   = ansp_is_field_public( $singer->ID, 'pronouns' )
+				? (string) get_post_meta( $singer->ID, 'pronouns', true )
+				: '';
 			$profession = (string) get_post_meta( $singer->ID, 'profession', true );
 			$parts      = self::parts_string( $singer->ID );
 

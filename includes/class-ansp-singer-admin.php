@@ -36,6 +36,157 @@ class ANSP_Singer_Admin {
 		add_action( 'bulk_edit_custom_box', array( __CLASS__, 'bulk_edit_box' ), 10, 2 );
 		add_action( 'save_post_singer', array( __CLASS__, 'save_quick_edit' ), 10, 2 );
 		add_action( 'admin_footer-edit.php', array( __CLASS__, 'inline_script' ) );
+
+		// Filters above the list, and the sortable On page column.
+		add_action( 'restrict_manage_posts', array( __CLASS__, 'render_filters' ) );
+		add_action( 'pre_get_posts', array( __CLASS__, 'apply_filters_to_query' ) );
+		add_filter( 'manage_edit-singer_sortable_columns', array( __CLASS__, 'sortable_columns' ) );
+	}
+
+	/**
+	 * Make the Groups and On page columns sortable.
+	 *
+	 * @param array<string,string> $columns Sortable columns.
+	 * @return array<string,string>
+	 */
+	public static function sortable_columns( $columns ) {
+		$columns['ansp_public'] = 'ansp_public';
+		return $columns;
+	}
+
+	/**
+	 * Active / Group dropdowns above the Singers list.
+	 *
+	 * @param string $post_type Current post type.
+	 * @return void
+	 */
+	public static function render_filters( $post_type ) {
+		if ( 'singer' !== $post_type ) {
+			return;
+		}
+
+		$active = isset( $_GET['ansp_active_filter'] ) ? sanitize_key( wp_unslash( $_GET['ansp_active_filter'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only list filter.
+		$group  = isset( $_GET['ansp_group_filter'] ) ? sanitize_key( wp_unslash( $_GET['ansp_group_filter'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+
+		?>
+		<select name="ansp_active_filter">
+			<option value=""><?php esc_html_e( 'All singers', 'ans-singers-portal' ); ?></option>
+			<option value="active" <?php selected( $active, 'active' ); ?>><?php esc_html_e( 'Active — on the Singers page', 'ans-singers-portal' ); ?></option>
+			<option value="inactive" <?php selected( $active, 'inactive' ); ?>><?php esc_html_e( 'Inactive — hidden', 'ans-singers-portal' ); ?></option>
+		</select>
+		<?php
+
+		$terms = get_terms(
+			array(
+				'taxonomy'   => 'ans_group',
+				'hide_empty' => false,
+			)
+		);
+		if ( is_wp_error( $terms ) ) {
+			$terms = array();
+		}
+		?>
+		<select name="ansp_group_filter">
+			<option value=""><?php esc_html_e( 'All groups', 'ans-singers-portal' ); ?></option>
+			<option value="__none" <?php selected( $group, '__none' ); ?>><?php esc_html_e( 'No group assigned', 'ans-singers-portal' ); ?></option>
+			<?php foreach ( $terms as $term ) : ?>
+				<option value="<?php echo esc_attr( $term->slug ); ?>" <?php selected( $group, $term->slug ); ?>>
+					<?php echo esc_html( $term->name ); ?>
+				</option>
+			<?php endforeach; ?>
+		</select>
+		<?php
+	}
+
+	/**
+	 * Apply the Active / Group filters and the On page sort.
+	 *
+	 * @param WP_Query $query Current query.
+	 * @return void
+	 */
+	public static function apply_filters_to_query( $query ) {
+		if ( ! is_admin() || ! $query->is_main_query() ) {
+			return;
+		}
+		if ( 'singer' !== $query->get( 'post_type' ) ) {
+			return;
+		}
+
+		$active = isset( $_GET['ansp_active_filter'] ) ? sanitize_key( wp_unslash( $_GET['ansp_active_filter'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$group  = isset( $_GET['ansp_group_filter'] ) ? sanitize_key( wp_unslash( $_GET['ansp_group_filter'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+
+		if ( 'active' === $active || 'inactive' === $active ) {
+			/*
+			 * Active is stored as ABSENCE of meta — only an explicit 'no'
+			 * means hidden. So "active" has to match rows where the key does
+			 * not exist as well as rows where it is not 'no'; a plain
+			 * meta_query on the key alone would return almost nobody.
+			 */
+			if ( 'inactive' === $active ) {
+				$query->set(
+					'meta_query', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					array(
+						array(
+							'key'     => ANSP_Singers_Public::META_ACTIVE,
+							'value'   => 'no',
+							'compare' => '=',
+						),
+					)
+				);
+			} else {
+				$query->set(
+					'meta_query', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					array(
+						'relation' => 'OR',
+						array(
+							'key'     => ANSP_Singers_Public::META_ACTIVE,
+							'compare' => 'NOT EXISTS',
+						),
+						array(
+							'key'     => ANSP_Singers_Public::META_ACTIVE,
+							'value'   => 'no',
+							'compare' => '!=',
+						),
+					)
+				);
+			}
+		}
+
+		if ( '' !== $group ) {
+			if ( '__none' === $group ) {
+				$all = get_terms(
+					array(
+						'taxonomy'   => 'ans_group',
+						'hide_empty' => false,
+						'fields'     => 'ids',
+					)
+				);
+				if ( ! is_wp_error( $all ) && ! empty( $all ) ) {
+					$query->set(
+						'tax_query', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
+						array(
+							array(
+								'taxonomy' => 'ans_group',
+								'field'    => 'term_id',
+								'terms'    => $all,
+								'operator' => 'NOT IN',
+							),
+						)
+					);
+				}
+			} else {
+				$query->set(
+					'tax_query', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
+					array(
+						array(
+							'taxonomy' => 'ans_group',
+							'field'    => 'slug',
+							'terms'    => $group,
+						),
+					)
+				);
+			}
+		}
 	}
 
 	/**

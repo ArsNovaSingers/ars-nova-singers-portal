@@ -92,6 +92,11 @@ class ANSP_Taxonomies {
 					'hierarchical'      => true,
 					'rewrite'           => false,
 					'meta_box_cb'       => false, // We render our own group UIs.
+					// Suppress WordPress's own taxonomy checklist in Quick Edit:
+					// ANSP_Singer_Admin renders its own group checkboxes, and
+					// two competing group checklists in one panel is worse
+					// than either alone.
+					'show_in_quick_edit' => false,
 					'capabilities'      => $tax_caps,
 				)
 			);

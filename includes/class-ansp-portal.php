@@ -107,6 +107,16 @@ class ANSP_Portal {
 		$html .= '<p class="ansp-login-sub">' . esc_html__( 'Members only. Please sign in to see rehearsal materials, the roster and calendars.', 'ans-singers-portal' ) . '</p>';
 		$html .= $form; // Core-generated, safe markup.
 		$html .= '<p class="ansp-login-lost"><a href="' . esc_url( wp_lostpassword_url( ansp_get_portal_url() ) ) . '">' . esc_html__( 'Forgot your password?', 'ans-singers-portal' ) . '</a></p>';
+
+		/**
+		 * Append to the logged-out portal card — used by ANSP_Registration to
+		 * add the "First time here? Register" panel without this class needing
+		 * to know registration exists.
+		 *
+		 * @param string $extra Additional markup.
+		 */
+		$html .= apply_filters( 'ansp_login_prompt_extra', '' );
+
 		$html .= '</div></div>';
 
 		return $html;

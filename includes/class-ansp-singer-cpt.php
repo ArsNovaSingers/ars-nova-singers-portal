@@ -39,6 +39,36 @@ function ansp_voice_part_options() {
 }
 
 /**
+ * Common pronoun choices, offered as SUGGESTIONS only.
+ *
+ * Rendered as a <datalist>, never a <select>. The field must keep accepting
+ * free text: a closed list would silently exclude anyone whose pronouns are
+ * not on it, and this is the one field where getting that wrong is personal
+ * rather than merely inconvenient.
+ *
+ * Seeded from the values singers have actually entered on this site, so the
+ * list matches the choir rather than a generic template.
+ *
+ * @return string[]
+ */
+function ansp_pronoun_suggestions() {
+	return apply_filters(
+		'ansp_pronoun_suggestions',
+		array(
+			'She/Her',
+			'She/Her/Hers',
+			'He/Him',
+			'He/Him/His',
+			'They/Them',
+			'They/Them/Theirs',
+			'She/They',
+			'He/They',
+			'Any pronouns',
+		)
+	);
+}
+
+/**
  * Is the OLD standalone "Ars Nova Singer Directory" plugin still active?
  *
  * @return bool

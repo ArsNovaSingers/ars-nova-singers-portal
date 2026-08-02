@@ -107,7 +107,22 @@ endif;
 		<div class="ansp-field">
 			<label>
 				<span class="ansp-field-label"><?php esc_html_e( 'Pronouns', 'ans-singers-portal' ); ?></span>
-				<input type="text" name="ansp_pronouns" value="<?php echo esc_attr( $ansp_pronouns ); ?>" />
+				<?php
+				/*
+				 * A datalist, deliberately NOT a <select>. The common choices
+				 * are one click away, but the field still accepts anything
+				 * typed — a fixed list would silently exclude anyone whose
+				 * pronouns are not on it, which is the one field where that
+				 * matters most.
+				 */
+				?>
+				<input type="text" name="ansp_pronouns" list="ansp-pronoun-options" value="<?php echo esc_attr( $ansp_pronouns ); ?>" autocomplete="off" />
+				<datalist id="ansp-pronoun-options">
+					<?php foreach ( ansp_pronoun_suggestions() as $ansp_option ) : ?>
+						<option value="<?php echo esc_attr( $ansp_option ); ?>"></option>
+					<?php endforeach; ?>
+				</datalist>
+				<span class="ansp-field-hint"><?php esc_html_e( 'Pick a common option or type your own. Leave blank to show none.', 'ans-singers-portal' ); ?></span>
 			</label>
 			<label class="ansp-privacy-toggle">
 				<input type="checkbox" name="ansp_privacy[pronouns]" value="1" <?php checked( ! empty( $ansp_privacy['pronouns'] ) ); ?> />

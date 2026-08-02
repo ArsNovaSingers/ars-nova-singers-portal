@@ -38,6 +38,7 @@ class ANSP_Registration {
 	const OPT_CODES      = 'ansp_access_codes';
 	const OPT_LOG        = 'ansp_registration_log';
 	const OPT_NOTIFY     = 'ansp_registration_notify';
+	const OPT_HISTORY    = 'ansp_code_history';
 	const LOG_MAX        = 500;
 	const RATE_LIMIT     = 6;    // Attempts per window, per IP.
 	const RATE_WINDOW    = 900;  // 15 minutes.
@@ -525,7 +526,9 @@ class ANSP_Registration {
 					 * miserable thing to debug.
 					 */
 					if ( $new !== (string) $codes[ $key ]['code'] ) {
-						$codes[ $key ]['uses'] = 0;
+						self::archive_code( $key, $codes[ $key ] );
+						$codes[ $key ]['uses']    = 0;
+						$codes[ $key ]['created'] = current_time( 'mysql' );
 					}
 					$codes[ $key ]['code'] = $new;
 				}
@@ -691,8 +694,97 @@ class ANSP_Registration {
 					</tbody>
 				</table>
 			<?php endif; ?>
+
+			<?php
+			/**
+			 * Render after the codes and registration log — used by
+			 * ANSP_Invitations for the send form, the invitation tracker and
+			 * the exports.
+			 */
+			do_action( 'ansp_after_access_codes' );
+			?>
+
+			<h2><?php esc_html_e( 'Retired codes', 'ans-singers-portal' ); ?></h2>
+			<?php $ansp_history = self::get_history(); ?>
+			<?php if ( empty( $ansp_history ) ) : ?>
+				<p><?php esc_html_e( 'No codes have been retired yet. When you change a code, the old one is archived here.', 'ans-singers-portal' ); ?></p>
+			<?php else : ?>
+				<p class="description">
+					<?php esc_html_e( 'These no longer work. Kept so that a singer quoting an old code can be told when it was retired.', 'ans-singers-portal' ); ?>
+				</p>
+				<table class="widefat striped">
+					<thead>
+						<tr>
+							<th><?php esc_html_e( 'Code', 'ans-singers-portal' ); ?></th>
+							<th><?php esc_html_e( 'For', 'ans-singers-portal' ); ?></th>
+							<th><?php esc_html_e( 'Times used', 'ans-singers-portal' ); ?></th>
+							<th><?php esc_html_e( 'Retired', 'ans-singers-portal' ); ?></th>
+						</tr>
+					</thead>
+					<tbody>
+						<?php foreach ( $ansp_history as $ansp_old ) : ?>
+							<tr>
+								<td><code><?php echo esc_html( isset( $ansp_old['code'] ) ? $ansp_old['code'] : '' ); ?></code></td>
+								<td><?php echo esc_html( isset( $ansp_old['label'] ) ? $ansp_old['label'] : '' ); ?></td>
+								<td><?php echo esc_html( isset( $ansp_old['uses'] ) ? (string) $ansp_old['uses'] : '0' ); ?></td>
+								<td><?php echo esc_html( isset( $ansp_old['retired'] ) ? $ansp_old['retired'] : '' ); ?></td>
+							</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+			<?php endif; ?>
 		</div>
 		<?php
+	}
+
+	/**
+	 * Archive a code that is being replaced.
+	 *
+	 * Retired codes are kept so an invitation sent last season can still be
+	 * explained: "that code was retired on 12 August, here is the current one."
+	 * Without this, a singer quoting an old code is unexplainable.
+	 *
+	 * @param string               $key Code key.
+	 * @param array<string,mixed>  $def The code definition being retired.
+	 * @return void
+	 */
+	public static function archive_code( $key, $def ) {
+		if ( '' === (string) $def['code'] ) {
+			return; // Never had a code — nothing to retire.
+		}
+
+		$history = get_option( self::OPT_HISTORY, array() );
+		if ( ! is_array( $history ) ) {
+			$history = array();
+		}
+
+		array_unshift(
+			$history,
+			array(
+				'key'     => $key,
+				'label'   => isset( $def['label'] ) ? $def['label'] : $key,
+				'code'    => (string) $def['code'],
+				'uses'    => (int) $def['uses'],
+				'created' => isset( $def['created'] ) ? $def['created'] : '',
+				'retired' => current_time( 'mysql' ),
+			)
+		);
+
+		if ( count( $history ) > 100 ) {
+			$history = array_slice( $history, 0, 100 );
+		}
+
+		update_option( self::OPT_HISTORY, $history );
+	}
+
+	/**
+	 * Retired codes, newest first.
+	 *
+	 * @return array<int,array<string,mixed>>
+	 */
+	public static function get_history() {
+		$history = get_option( self::OPT_HISTORY, array() );
+		return is_array( $history ) ? $history : array();
 	}
 
 	/**

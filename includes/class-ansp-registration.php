@@ -69,21 +69,34 @@ class ANSP_Registration {
 			'singer' => array(
 				'label'     => __( 'Singer', 'ans-singers-portal' ),
 				'role'      => 'singer',
+				'group'     => '',
+				'profile'   => true,
 				'code'      => '',
 				'enabled'   => false,
 				'expires'   => '',
 				'max_uses'  => 0,
 				'uses'      => 0,
 			),
-			'board'  => array(
-				'label'     => __( 'Board', 'ans-singers-portal' ),
-				'role'      => 'ans_board',
-				'code'      => '',
-				'enabled'   => false,
-				'expires'   => '',
-				'max_uses'  => 0,
-				'uses'      => 0,
-			),
+		);
+	}
+
+	/**
+	 * The shape every code shares. Custom codes are merged over this, so a
+	 * code stored before v1.10.0 (no group, no profile flag) still resolves.
+	 *
+	 * @return array<string,mixed>
+	 */
+	public static function code_defaults() {
+		return array(
+			'label'    => '',
+			'role'     => 'singer',
+			'group'    => '',
+			'profile'  => true,
+			'code'     => '',
+			'enabled'  => false,
+			'expires'  => '',
+			'max_uses' => 0,
+			'uses'     => 0,
 		);
 	}
 
@@ -97,17 +110,54 @@ class ANSP_Registration {
 		$codes  = self::default_codes();
 
 		if ( is_array( $stored ) ) {
-			foreach ( $codes as $key => $default ) {
-				if ( isset( $stored[ $key ] ) && is_array( $stored[ $key ] ) ) {
-					$codes[ $key ] = array_merge( $default, $stored[ $key ] );
-					// Label and role are structural — never overridable by stored data.
-					$codes[ $key ]['label'] = $default['label'];
-					$codes[ $key ]['role']  = $default['role'];
+			foreach ( $stored as $key => $row ) {
+				if ( ! is_array( $row ) ) {
+					continue;
 				}
+				$key = sanitize_key( $key );
+				if ( '' === $key ) {
+					continue;
+				}
+
+				$base = isset( $codes[ $key ] ) ? $codes[ $key ] : self::code_defaults();
+				$row  = array_merge( $base, $row );
+
+				// A stored role must be one that actually exists, or the account
+				// comes out with no role at all and the singer is locked out of
+				// the portal with an unhelpful message. This is exactly how the
+				// old hardcoded 'ans_board' code failed.
+				if ( ! get_role( (string) $row['role'] ) ) {
+					$row['role'] = 'singer';
+				}
+				$row['group'] = sanitize_key( (string) $row['group'] );
+
+				$codes[ $key ] = $row;
 			}
 		}
 
-		return $codes;
+		/**
+		 * Filter the access codes.
+		 *
+		 * @param array<string,array<string,mixed>> $codes
+		 */
+		return apply_filters( 'ansp_access_codes', $codes );
+	}
+
+	/**
+	 * Codes that carry a group, keyed by group slug. Used by the admin screen
+	 * to warn when two codes point at the same group.
+	 *
+	 * @return array<string,string> group slug => code key.
+	 */
+	public static function codes_by_group() {
+		$map = array();
+		foreach ( self::get_codes() as $key => $def ) {
+			$slug = isset( $def['group'] ) ? (string) $def['group'] : '';
+			if ( '' !== $slug && ! isset( $map[ $slug ] ) ) {
+				$map[ $slug ] = $key;
+			}
+		}
+		return $map;
 	}
 
 	/**
@@ -374,7 +424,7 @@ class ANSP_Registration {
 
 		// Create and link the matching profile.
 		$profile_id = 0;
-		if ( 'singer' === $code_key ) {
+		if ( ! empty( $def['profile'] ) ) {
 			$profile_id = wp_insert_post(
 				array(
 					'post_type'   => 'singer',
@@ -386,6 +436,27 @@ class ANSP_Registration {
 			if ( ! is_wp_error( $profile_id ) ) {
 				$profile_id = (int) $profile_id;
 				update_user_meta( $user_id, ANSP_Profile_Link::META, $profile_id );
+
+				/*
+				 * Put the singer in the code's group.
+				 *
+				 * This is the whole point of a per-group code: whoever redeems
+				 * the Chamber Singers code lands in Chamber Singers without the
+				 * Personnel Manager touching the record. Group membership lives
+				 * on the singer PROFILE (that is where ANSP_Permissions reads
+				 * it from), not on the WP user.
+				 *
+				 * Silently skipped when the code carries no group, or when the
+				 * stored slug no longer matches a real term — a renamed or
+				 * deleted group must never cost someone their account.
+				 */
+				$group_slug = isset( $def['group'] ) ? sanitize_key( (string) $def['group'] ) : '';
+				if ( '' !== $group_slug && taxonomy_exists( 'ans_group' ) ) {
+					$term = get_term_by( 'slug', $group_slug, 'ans_group' );
+					if ( $term instanceof WP_Term ) {
+						wp_set_object_terms( $profile_id, array( (int) $term->term_id ), 'ans_group', false );
+					}
+				}
 			} else {
 				$profile_id = 0;
 			}
@@ -535,6 +606,46 @@ class ANSP_Registration {
 				$codes[ $key ]['enabled']  = ! empty( $_POST[ 'enabled_' . $key ] );
 				$codes[ $key ]['expires']  = isset( $_POST[ 'expires_' . $key ] ) ? sanitize_text_field( wp_unslash( $_POST[ 'expires_' . $key ] ) ) : '';
 				$codes[ $key ]['max_uses'] = isset( $_POST[ 'max_uses_' . $key ] ) ? absint( $_POST[ 'max_uses_' . $key ] ) : 0;
+
+				// Which group this code drops a new singer into. '' = none.
+				if ( isset( $_POST[ 'group_' . $key ] ) ) {
+					$codes[ $key ]['group'] = sanitize_key( wp_unslash( $_POST[ 'group_' . $key ] ) );
+				}
+				// Custom codes own their label; the built-in 'singer' one does not.
+				if ( 'singer' !== $key && isset( $_POST[ 'label_' . $key ] ) ) {
+					$codes[ $key ]['label'] = sanitize_text_field( wp_unslash( $_POST[ 'label_' . $key ] ) );
+				}
+				// Retire a custom code entirely.
+				if ( 'singer' !== $key && ! empty( $_POST[ 'delete_' . $key ] ) ) {
+					self::archive_code( $key, $codes[ $key ] );
+					unset( $codes[ $key ] );
+				}
+			}
+
+			/*
+			 * Add a code. Keyed by its group slug so "one code per group" is
+			 * structurally true rather than a convention someone has to
+			 * remember — adding a second code for a group overwrites the
+			 * first instead of quietly creating a rival.
+			 */
+			$new_label = isset( $_POST['ansp_new_label'] ) ? sanitize_text_field( wp_unslash( $_POST['ansp_new_label'] ) ) : '';
+			$new_group = isset( $_POST['ansp_new_group'] ) ? sanitize_key( wp_unslash( $_POST['ansp_new_group'] ) ) : '';
+			if ( '' !== $new_label ) {
+				$new_key = $new_group ? $new_group : sanitize_key( $new_label );
+				if ( '' !== $new_key && 'singer' !== $new_key ) {
+					$codes[ $new_key ] = array_merge(
+						self::code_defaults(),
+						array(
+							'label'   => $new_label,
+							'role'    => 'singer',
+							'group'   => $new_group,
+							'profile' => true,
+							'code'    => self::generate_code(),
+							'enabled' => true,
+							'created' => current_time( 'mysql' ),
+						)
+					);
+				}
 			}
 
 			update_option( self::OPT_CODES, $codes );
@@ -560,8 +671,21 @@ class ANSP_Registration {
 			<form method="post">
 				<?php wp_nonce_field( 'ansp_save_codes', 'ansp_codes_nonce' ); ?>
 
+				<?php $ansp_group_choices = ANSP_Taxonomies::get_group_choices(); ?>
 				<?php foreach ( $codes as $key => $def ) : ?>
 					<h2><?php echo esc_html( $def['label'] ); ?></h2>
+					<?php if ( 'singer' !== $key ) : ?>
+						<p>
+							<label>
+								<?php esc_html_e( 'Name shown here:', 'ans-singers-portal' ); ?>
+								<input type="text" class="regular-text" name="label_<?php echo esc_attr( $key ); ?>" value="<?php echo esc_attr( (string) $def['label'] ); ?>" />
+							</label>
+							<label style="margin-left:1.5rem;color:#b32d2e;">
+								<input type="checkbox" name="delete_<?php echo esc_attr( $key ); ?>" value="1" />
+								<?php esc_html_e( 'Delete this code on save', 'ans-singers-portal' ); ?>
+							</label>
+						</p>
+					<?php endif; ?>
 					<table class="form-table" role="presentation">
 						<tr>
 							<th scope="row"><?php esc_html_e( 'Enabled', 'ans-singers-portal' ); ?></th>
@@ -581,6 +705,44 @@ class ANSP_Registration {
 								</button>
 								<p class="description">
 									<?php esc_html_e( 'Generating replaces the code in the box — nothing changes until you press Save. Saving a different code resets its use count and immediately stops the old one working.', 'ans-singers-portal' ); ?>
+								</p>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="group_<?php echo esc_attr( $key ); ?>"><?php esc_html_e( 'Puts the singer in', 'ans-singers-portal' ); ?></label></th>
+							<td>
+								<select id="group_<?php echo esc_attr( $key ); ?>" name="group_<?php echo esc_attr( $key ); ?>">
+									<option value=""><?php esc_html_e( '— no group —', 'ans-singers-portal' ); ?></option>
+									<?php foreach ( $ansp_group_choices as $ansp_g_slug => $ansp_g_name ) : ?>
+										<option value="<?php echo esc_attr( $ansp_g_slug ); ?>" <?php selected( (string) $def['group'], (string) $ansp_g_slug ); ?>><?php echo esc_html( $ansp_g_name ); ?></option>
+									<?php endforeach; ?>
+
+				<hr />
+				<h2><?php esc_html_e( 'Add a code', 'ans-singers-portal' ); ?></h2>
+				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row"><label for="ansp_new_label"><?php esc_html_e( 'Name', 'ans-singers-portal' ); ?></label></th>
+						<td>
+							<input type="text" class="regular-text" id="ansp_new_label" name="ansp_new_label" value="" placeholder="<?php esc_attr_e( 'e.g. Chamber Singers', 'ans-singers-portal' ); ?>" />
+							<p class="description"><?php esc_html_e( 'Leave blank to add nothing. A random code is generated and enabled on save — you can change it afterwards.', 'ans-singers-portal' ); ?></p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="ansp_new_group"><?php esc_html_e( 'Puts the singer in', 'ans-singers-portal' ); ?></label></th>
+						<td>
+							<select id="ansp_new_group" name="ansp_new_group">
+								<option value=""><?php esc_html_e( '— no group —', 'ans-singers-portal' ); ?></option>
+								<?php foreach ( $ansp_group_choices as $ansp_g_slug => $ansp_g_name ) : ?>
+									<option value="<?php echo esc_attr( $ansp_g_slug ); ?>"><?php echo esc_html( $ansp_g_name ); ?></option>
+								<?php endforeach; ?>
+							</select>
+							<p class="description"><?php esc_html_e( 'One code per group. Adding a second code for a group replaces the first.', 'ans-singers-portal' ); ?></p>
+						</td>
+					</tr>
+				</table>
+								</select>
+								<p class="description">
+									<?php esc_html_e( 'Anyone who registers with this code is added to this group automatically — no need to edit their record afterwards. Leave as "no group" and they arrive with none, which means they see only materials shared with everyone.', 'ans-singers-portal' ); ?>
 								</p>
 							</td>
 						</tr>

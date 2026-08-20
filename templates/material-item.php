@@ -55,8 +55,12 @@ $ansp_embed_kses = array(
 		'referrerpolicy'  => true,
 	),
 );
+
+// A Drive/Docs preview is a reading surface, not a thumbnail — it gets the
+// full width of the materials grid instead of one column of two.
+$ansp_wide_class = $ansp_preview_url ? ' ansp-material--wide' : '';
 ?>
-<article class="ansp-material ansp-material--<?php echo esc_attr( $ansp_type ); ?>" data-ansp-tags="<?php echo esc_attr( $ansp_tags_key ); ?>">
+<article class="ansp-material ansp-material--<?php echo esc_attr( $ansp_type ); ?><?php echo esc_attr( $ansp_wide_class ); ?>" data-ansp-tags="<?php echo esc_attr( $ansp_tags_key ); ?>">
 	<header class="ansp-material-head">
 		<span class="ansp-material-type"><?php echo esc_html( $ansp_type_label ); ?></span>
 		<h5 class="ansp-material-title"><?php echo esc_html( $ansp_title ); ?></h5>

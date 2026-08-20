@@ -327,18 +327,32 @@ class ANSP_Singers_Public {
 			echo '<div class="ans-singer">';
 
 			if ( has_post_thumbnail( $singer->ID ) ) {
+				$ansp_photo_link = ( 'publish' === get_post_status( $singer ) ) ? get_permalink( $singer ) : '';
 				echo '<div class="ans-singer__photo">';
+				if ( $ansp_photo_link ) {
+					echo '<a href="' . esc_url( $ansp_photo_link ) . '">';
+				}
 				echo wp_kses_post(
 					get_the_post_thumbnail(
 						$singer->ID,
-						'thumbnail',
+						'medium',
 						array( 'loading' => 'lazy', 'class' => 'ans-singer__img' )
 					)
 				);
+				if ( $ansp_photo_link ) {
+					echo '</a>';
+				}
 				echo '</div>';
 			}
 
-			echo '<p class="ans-singer__name"><strong>' . esc_html( get_the_title( $singer ) ) . '</strong>';
+			$ansp_link = ( 'publish' === get_post_status( $singer ) ) ? get_permalink( $singer ) : '';
+			echo '<p class="ans-singer__name"><strong>';
+			if ( $ansp_link ) {
+				echo '<a class="ans-singer__link" href="' . esc_url( $ansp_link ) . '">' . esc_html( get_the_title( $singer ) ) . '</a>';
+			} else {
+				echo esc_html( get_the_title( $singer ) );
+			}
+			echo '</strong>';
 			if ( $pronouns ) {
 				echo ' <span class="ans-singer__pronouns">(' . esc_html( $pronouns ) . ')</span>';
 			}
@@ -481,10 +495,15 @@ class ANSP_Singers_Public {
 			.ans-singers--cols-4 { grid-template-columns: repeat(4, 1fr); }
 			@media (max-width: 900px) { .ans-singers { grid-template-columns: repeat(2, 1fr); } }
 			@media (max-width: 560px) { .ans-singers { grid-template-columns: 1fr; } }
-			.ans-singer { text-align: center; }
-			.ans-singer__photo { margin: 0 0 .6rem; }
-			.ans-singer__img { border-radius: 50%; width: 160px; height: 160px; object-fit: cover; }
+			.ans-singer { text-align: left; }
+			.ans-singer__photo { margin: 0 0 .75rem; }
+			.ans-singer__img { border-radius: 4px; width: 100%; height: auto; aspect-ratio: 1 / 1; object-fit: cover; object-position: center 20%; display: block; }
 			.ans-singer__name { margin: 0 0 .15rem; }
+			.ans-singer__link { color: inherit; text-decoration: none; }
+			.ans-singer__link:hover, .ans-singer__link:focus { text-decoration: underline; }
+			.ans-singer__photo a { display: block; }
+			.ans-singer__photo img { transition: opacity .18s ease; }
+			.ans-singer__photo a:hover img { opacity: .88; }
 			.ans-singer__pronouns { font-weight: 400; font-size: .9em; opacity: .75; }
 			.ans-singer__detail { margin: 0; font-size: .95rem; opacity: .9; }
 		</style>

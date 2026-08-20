@@ -3,7 +3,7 @@
  * Portal shell: accessible, mobile-first tabbed interface.
  *
  * Tabs: Home/Announcements · My Bio · Roster · Calendar ·
- * Season Materials · Past Projects. Tab switching is handled by
+ * Season Materials. (Past Projects is built but hidden.) Tab switching is handled by
  * assets/portal.js (hash deep-linking, arrow-key navigation).
  *
  * Only ever rendered for logged-in users with portal access
@@ -22,8 +22,22 @@ $ansp_tabs = array(
 	'roster'           => __( 'Roster', 'ans-singers-portal' ),
 	'calendar'         => __( 'Calendar', 'ans-singers-portal' ),
 	'season-materials' => __( 'Season Materials', 'ans-singers-portal' ),
-	'past-projects'    => __( 'Past Projects', 'ans-singers-portal' ),
+
+	/*
+	 * Past Projects — HIDDEN 2026-08-20 at Jonathan's request.
+	 * Nothing was removed: templates/tab-past-projects.php is intact and the
+	 * "Archived" project status still works in wp-admin. Uncomment this one
+	 * line (or hook the filter below) to bring the tab back for singers.
+	 */
+	// 'past-projects'    => __( 'Past Projects', 'ans-singers-portal' ),
 );
+
+/**
+ * Filter the singer-facing portal tabs.
+ *
+ * @param array<string,string> $ansp_tabs tab id => label.
+ */
+$ansp_tabs = apply_filters( 'ansp_portal_tabs', $ansp_tabs );
 ?>
 <div class="ansp-portal" id="ansp-portal">
 

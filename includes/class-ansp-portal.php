@@ -3,7 +3,7 @@
  * Front-end portal: the [ans_singers_portal] shortcode.
  *
  * Renders the tabbed member area (Home/Announcements, My Bio, Roster,
- * Calendar, Season Materials, Past Projects) from the templates/ directory.
+ * Calendar, Season Materials) from the templates/ directory.
  * Logged-out visitors only ever see a branded login prompt.
  *
  * Assets are registered globally but enqueued only when the shortcode is

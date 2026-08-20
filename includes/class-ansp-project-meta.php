@@ -34,7 +34,7 @@ class ANSP_Project_Meta {
 	public static function statuses() {
 		return array(
 			'active'   => __( 'Active (shows in Season Materials)', 'ans-singers-portal' ),
-			'archived' => __( 'Archived (shows in Past Projects)', 'ans-singers-portal' ),
+			'archived' => __( 'Archived (hidden from the portal)', 'ans-singers-portal' ),
 		);
 	}
 

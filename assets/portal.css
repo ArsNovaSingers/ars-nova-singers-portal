@@ -202,11 +202,12 @@
 	flex-wrap: wrap;
 }
 .ansp-headshot {
-	width: 96px;
-	height: 96px;
+	width: 160px;
+	height: 160px;
+	aspect-ratio: 1 / 1;
 	object-fit: cover;
-	border-radius: 50%;
-	border: 2px solid var(--ansp-border);
+	border-radius: 4px;
+	border: 1px solid var(--ansp-border);
 }
 .ansp-headshot--placeholder { background: var(--ansp-accent-soft); }
 
@@ -225,24 +226,46 @@
 .ansp-roster-card {
 	border: 1px solid var(--ansp-border);
 	border-radius: var(--ansp-radius);
-	padding: 1.25rem;
-	text-align: center;
+	padding: 0 0 1.15rem;
+	text-align: left;
+	overflow: hidden;
+}
+/* Photo bleeds to the card edge; everything else keeps an inset. */
+.ansp-roster-card > *:not(.ansp-roster-photo) {
+	padding-left: 1.15rem;
+	padding-right: 1.15rem;
 }
 .ansp-roster-photo {
-	width: 110px;
-	height: 110px;
+	width: 100%;
+	height: auto;
+	aspect-ratio: 1 / 1;
 	object-fit: cover;
-	border-radius: 50%;
-	margin: 0 auto 0.6rem;
+	object-position: center 20%;
+	border-radius: 0;
+	margin: 0 0 0.9rem;
 	display: block;
-	border: 2px solid var(--ansp-border);
+	border: 0;
 }
+.ansp-roster-photo-link { display: block; }
+.ansp-roster-photo-link img { transition: opacity 0.18s ease; }
+.ansp-roster-photo-link:hover img,
+.ansp-roster-photo-link:focus img { opacity: 0.88; }
+.ansp-roster-name-link { color: inherit; text-decoration: none; }
+.ansp-roster-name-link:hover,
+.ansp-roster-name-link:focus { text-decoration: underline; }
+.ansp-roster-more {
+	margin: 0.75rem 0 0;
+	font-size: 0.88em;
+}
+.ansp-roster-more a { text-decoration: none; font-weight: 600; }
+.ansp-roster-more a:hover,
+.ansp-roster-more a:focus { text-decoration: underline; }
 .ansp-roster-photo--placeholder {
 	background: var(--ansp-accent-soft);
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	font-size: 2rem;
+	font-size: 3.25rem;
 	color: var(--ansp-accent);
 }
 .ansp-roster-name { margin: 0 0 0.25rem; }
@@ -380,6 +403,18 @@
 	overflow: hidden;
 	background: #f4f5f7;
 	margin-bottom: 0.6rem;
+}
+/*
+ * A material with an inline document preview spans the whole materials grid.
+ * Half a column is fine for a thumbnail; it is not enough to read a score or
+ * a rehearsal doc in — headings wrap three deep and nobody reads it.
+ */
+.ansp-material--wide {
+	grid-column: 1 / -1;
+}
+.ansp-material--wide .ansp-embed--drive {
+	padding-top: 0;
+	height: clamp(460px, 78vh, 940px);
 }
 .ansp-embed--drive iframe,
 .ansp-embed--video iframe,

@@ -27,15 +27,32 @@ $ansp_singers    = ANSP_Roster::get_visible_singers( $ansp_viewer_id );
 			$ansp_fields   = ANSP_Roster::get_card_fields( $ansp_pid, $ansp_is_manager );
 			$ansp_groups   = ANSP_Roster::get_group_names( $ansp_pid );
 			?>
+			<?php
+			// Public bio page — only for published profiles, so an unpublished
+			// or draft singer never gets a link that 404s.
+			$ansp_bio_link = ( 'publish' === get_post_status( $ansp_singer ) ) ? get_permalink( $ansp_singer ) : '';
+			?>
 			<article class="ansp-roster-card">
 				<?php if ( $ansp_headshot ) : ?>
-					<img class="ansp-roster-photo" src="<?php echo esc_url( $ansp_headshot ); ?>" alt="<?php echo esc_attr( get_the_title( $ansp_singer ) ); ?>" loading="lazy" />
+					<?php if ( $ansp_bio_link ) : ?>
+						<a class="ansp-roster-photo-link" href="<?php echo esc_url( $ansp_bio_link ); ?>">
+							<img class="ansp-roster-photo" src="<?php echo esc_url( $ansp_headshot ); ?>" alt="<?php echo esc_attr( get_the_title( $ansp_singer ) ); ?>" loading="lazy" />
+						</a>
+					<?php else : ?>
+						<img class="ansp-roster-photo" src="<?php echo esc_url( $ansp_headshot ); ?>" alt="<?php echo esc_attr( get_the_title( $ansp_singer ) ); ?>" loading="lazy" />
+					<?php endif; ?>
 				<?php else : ?>
 					<div class="ansp-roster-photo ansp-roster-photo--placeholder" aria-hidden="true">
 						<span><?php echo esc_html( mb_substr( get_the_title( $ansp_singer ), 0, 1 ) ); ?></span>
 					</div>
 				<?php endif; ?>
-				<h4 class="ansp-roster-name"><?php echo esc_html( get_the_title( $ansp_singer ) ); ?></h4>
+				<h4 class="ansp-roster-name">
+					<?php if ( $ansp_bio_link ) : ?>
+						<a class="ansp-roster-name-link" href="<?php echo esc_url( $ansp_bio_link ); ?>"><?php echo esc_html( get_the_title( $ansp_singer ) ); ?></a>
+					<?php else : ?>
+						<?php echo esc_html( get_the_title( $ansp_singer ) ); ?>
+					<?php endif; ?>
+				</h4>
 				<?php if ( ! empty( $ansp_groups ) ) : ?>
 					<p class="ansp-badges">
 						<?php foreach ( $ansp_groups as $ansp_group_name ) : ?>
@@ -61,6 +78,11 @@ $ansp_singers    = ANSP_Roster::get_visible_singers( $ansp_viewer_id );
 						</div>
 					<?php endforeach; ?>
 				</dl>
+				<?php if ( $ansp_bio_link ) : ?>
+					<p class="ansp-roster-more">
+						<a href="<?php echo esc_url( $ansp_bio_link ); ?>"><?php esc_html_e( 'View full profile', 'ans-singers-portal' ); ?> &rarr;</a>
+					</p>
+				<?php endif; ?>
 			</article>
 		<?php endforeach; ?>
 	</div>

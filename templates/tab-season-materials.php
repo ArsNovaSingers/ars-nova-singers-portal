@@ -7,7 +7,8 @@
  * from the ans_project posts). Selecting a project reveals ALL its
  * materials (v1.2.0: materials are no longer gated per-user) rendered by
  * material-item.php with inline previews, plus a "Filter by tag" control
- * built from the union of the project's effective tags, and the RSVP form.
+ * built from the union of the project's effective tags. (The RSVP form is
+ * built but hidden — see below.)
  *
  * @package ArsNovaSingersPortal
  */
@@ -144,7 +145,18 @@ if ( $ansp_season instanceof WP_Term ) {
 					<div class="ansp-project-description"><?php echo wp_kses_post( wpautop( $ansp_desc ) ); ?></div>
 				<?php endif; ?>
 
-				<?php ANSP_RSVP::render_form( $ansp_pid ); ?>
+				<?php
+				/*
+				 * RSVP form — HIDDEN 2026-08-20 at Jonathan's request. Materials is
+				 * for getting your music, not for answering a question. The whole
+				 * RSVP feature is intact (includes/class-ansp-rsvp.php, saved
+				 * responses, the admin view) — only this one call is commented out,
+				 * so nothing already answered is lost. Filter below to re-enable.
+				 */
+				if ( apply_filters( 'ansp_show_project_rsvp', false, $ansp_pid ) ) {
+					ANSP_RSVP::render_form( $ansp_pid );
+				}
+				?>
 
 				<?php if ( empty( $ansp_materials ) ) : ?>
 					<p class="ansp-empty"><?php esc_html_e( 'No materials for this project yet.', 'ans-singers-portal' ); ?></p>

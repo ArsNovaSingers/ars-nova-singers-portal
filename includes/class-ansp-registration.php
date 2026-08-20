@@ -717,29 +717,6 @@ class ANSP_Registration {
 										<option value="<?php echo esc_attr( $ansp_g_slug ); ?>" <?php selected( (string) $def['group'], (string) $ansp_g_slug ); ?>><?php echo esc_html( $ansp_g_name ); ?></option>
 									<?php endforeach; ?>
 
-				<hr />
-				<h2><?php esc_html_e( 'Add a code', 'ans-singers-portal' ); ?></h2>
-				<table class="form-table" role="presentation">
-					<tr>
-						<th scope="row"><label for="ansp_new_label"><?php esc_html_e( 'Name', 'ans-singers-portal' ); ?></label></th>
-						<td>
-							<input type="text" class="regular-text" id="ansp_new_label" name="ansp_new_label" value="" placeholder="<?php esc_attr_e( 'e.g. Chamber Singers', 'ans-singers-portal' ); ?>" />
-							<p class="description"><?php esc_html_e( 'Leave blank to add nothing. A random code is generated and enabled on save — you can change it afterwards.', 'ans-singers-portal' ); ?></p>
-						</td>
-					</tr>
-					<tr>
-						<th scope="row"><label for="ansp_new_group"><?php esc_html_e( 'Puts the singer in', 'ans-singers-portal' ); ?></label></th>
-						<td>
-							<select id="ansp_new_group" name="ansp_new_group">
-								<option value=""><?php esc_html_e( '— no group —', 'ans-singers-portal' ); ?></option>
-								<?php foreach ( $ansp_group_choices as $ansp_g_slug => $ansp_g_name ) : ?>
-									<option value="<?php echo esc_attr( $ansp_g_slug ); ?>"><?php echo esc_html( $ansp_g_name ); ?></option>
-								<?php endforeach; ?>
-							</select>
-							<p class="description"><?php esc_html_e( 'One code per group. Adding a second code for a group replaces the first.', 'ans-singers-portal' ); ?></p>
-						</td>
-					</tr>
-				</table>
 								</select>
 								<p class="description">
 									<?php esc_html_e( 'Anyone who registers with this code is added to this group automatically — no need to edit their record afterwards. Leave as "no group" and they arrive with none, which means they see only materials shared with everyone.', 'ans-singers-portal' ); ?>
@@ -770,6 +747,30 @@ class ANSP_Registration {
 						</tr>
 					</table>
 				<?php endforeach; ?>
+
+				<hr />
+				<h2><?php esc_html_e( 'Add a code', 'ans-singers-portal' ); ?></h2>
+				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row"><label for="ansp_new_label"><?php esc_html_e( 'Name', 'ans-singers-portal' ); ?></label></th>
+						<td>
+							<input type="text" class="regular-text" id="ansp_new_label" name="ansp_new_label" value="" placeholder="<?php esc_attr_e( 'e.g. Chamber Singers', 'ans-singers-portal' ); ?>" />
+							<p class="description"><?php esc_html_e( 'Leave blank to add nothing. A random code is generated and enabled on save — you can change it afterwards.', 'ans-singers-portal' ); ?></p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="ansp_new_group"><?php esc_html_e( 'Puts the singer in', 'ans-singers-portal' ); ?></label></th>
+						<td>
+							<select id="ansp_new_group" name="ansp_new_group">
+								<option value=""><?php esc_html_e( '— no group —', 'ans-singers-portal' ); ?></option>
+								<?php foreach ( $ansp_group_choices as $ansp_g_slug => $ansp_g_name ) : ?>
+									<option value="<?php echo esc_attr( $ansp_g_slug ); ?>"><?php echo esc_html( $ansp_g_name ); ?></option>
+								<?php endforeach; ?>
+							</select>
+							<p class="description"><?php esc_html_e( 'One code per group. Adding a second code for a group replaces the first.', 'ans-singers-portal' ); ?></p>
+						</td>
+					</tr>
+				</table>
 
 				<h2><?php esc_html_e( 'Notifications', 'ans-singers-portal' ); ?></h2>
 				<table class="form-table" role="presentation">

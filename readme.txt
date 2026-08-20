@@ -4,7 +4,7 @@ Tags: members, portal, choir, private, materials
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.2.0
+Stable tag: 1.10.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -70,6 +70,21 @@ Deactivation removes nothing. Uninstall also keeps everything by default; define
 Since 1.2.0 there are no per-material grants: any logged-in portal member sees every material in a project they can access. Give the guest a portal account (Roster → Send portal invite) and, if the project is group-tagged, add them to that group (e.g. Special Guests).
 
 == Changelog ==
+
+= 1.10.0 =
+* Access codes now carry a GROUP. Anyone registering with a code is added to
+  that group automatically — the Personnel Manager no longer edits every new
+  singer's record by hand.
+* Codes can be added freely, one per group, instead of the two hardcoded ones.
+  A stored role that does not exist now falls back to `singer` rather than
+  producing an account with no role at all.
+* Headshots are square and image-forward on My Bio, the portal Roster and the
+  public Singers grid, cropped to the upper third so faces are not cut off.
+* Roster and the public grid link through to each singer's own bio page.
+* Document and Drive previews span the full materials grid at a readable height.
+* Past Projects tab and the per-project RSVP form are hidden behind the new
+  `ansp_portal_tabs` and `ansp_show_project_rsvp` filters. Nothing was removed.
+
 
 = 1.2.0 =
 * **Access-control on materials replaced by a tag + filter model.** Materials are no longer hidden from anyone: the whole portal is already login-gated, so every portal member now sees every material in a project they can access. The per-material permission UI (ALL / group checkboxes, voice-part checkboxes, email grants) is gone.

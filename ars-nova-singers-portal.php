@@ -3,7 +3,7 @@
  * Plugin Name:       Ars Nova Singers Portal
  * Plugin URI:        https://arsnovasingers.org/
  * Description:       Login-gated members portal for the Ars Nova Singers choir: seasons, projects, materials with unlimited free-form tags + a singer-side tag filter, roster, calendars, announcements, RSVPs, front-end singer bios with Gemini "Compose with AI", and the absorbed "singer" directory (CPT, profile details, public bio pages). Groups carry a Google Drive folder mapping — the folder is the access gate for a group's materials. No ACF or other plugin dependencies.
- * Version:           1.11.0
+ * Version:           1.12.0
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Ars Nova Singers
@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
  * Constants
  * -------------------------------------------------------------------------
  */
-define( 'ANSP_VERSION', '1.11.0' );
+define( 'ANSP_VERSION', '1.12.0' );
 define( 'ANSP_FILE', __FILE__ );
 define( 'ANSP_DIR', plugin_dir_path( __FILE__ ) );
 define( 'ANSP_URL', plugin_dir_url( __FILE__ ) );
@@ -56,6 +56,7 @@ require_once ANSP_DIR . 'includes/class-ansp-offboarding.php';
 require_once ANSP_DIR . 'includes/class-ansp-dashboard.php';
 require_once ANSP_DIR . 'includes/class-ansp-bio-editor.php';
 require_once ANSP_DIR . 'includes/class-ansp-ai-bio.php';
+require_once ANSP_DIR . 'includes/class-ansp-rest.php';
 
 /**
  * Boot the plugin.
@@ -97,6 +98,7 @@ function ansp_init() {
 	new ANSP_Dashboard();
 	new ANSP_Bio_Editor();
 	new ANSP_AI_Bio();
+	new ANSP_REST();     // Admin-only REST surface: everything the portal owns, reachable by API.
 }
 add_action( 'plugins_loaded', 'ansp_init' );
 

@@ -4,7 +4,7 @@ Tags: members, portal, choir, private, materials
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.11.0
+Stable tag: 1.12.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -70,6 +70,11 @@ Deactivation removes nothing. Uninstall also keeps everything by default; define
 Since 1.2.0 there are no per-material grants: any logged-in portal member sees every material in a project they can access. Give the guest a portal account (Roster → Send portal invite) and, if the project is group-tagged, add them to that group (e.g. Special Guests).
 
 == Changelog ==
+
+= 1.12.0 =
+* New admin-only REST surface covering everything the portal owns: status, groups, seasons, projects, materials, announcements, singers, settings, access codes, and trash. The portal's content types are deliberately not public in the REST API, which meant nobody could read or repair portal data by API — only by clicking through wp-admin. This closes that gap without opening any of it to the public.
+* Routes live under ars-nova/v1 with a /portal/ prefix rather than a namespace of their own, so they are reachable by the same connector everything else uses.
+* Every route requires the ansp_manage_portal capability (or manage_options), and every write against the production site must be resent with confirm_production=true. Writes to materials append by default, so a one-row call cannot wipe a season. Trash moves a post to the trash and never deletes it. Access codes come back masked and the code string itself cannot be set by API. The Gemini key reports only whether it is set.
 
 = 1.11.0 =
 * Materials is now one tab per group. A singer in the full choir sees one tab named for their ensemble; someone in both the full choir and Chamber Singers sees both, because the two rehearse separately and their music has always lived in different places. Tab labels come from the group's own name, so renaming a group in wp-admin renames the tab.

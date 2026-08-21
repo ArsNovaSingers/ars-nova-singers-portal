@@ -72,6 +72,57 @@ class ANSP_Permissions {
 	}
 
 	/**
+	 * The groups a viewer should get their own Materials tab for.
+	 *
+	 * A singer in one group gets one tab and never learns the others exist.
+	 * Someone in both — the February concert pairs the full choir with
+	 * Chamber Singers — gets both, which is the whole point: their music
+	 * lives in two different places and always has.
+	 *
+	 * Managers see every group, because the person setting materials up has
+	 * to be able to look at what each group will actually see.
+	 *
+	 * Returns terms, not slugs, so the caller can label a tab with the
+	 * group's own name. Rename the group in wp-admin and the tab follows —
+	 * nothing here hardcodes "Chamber Singers".
+	 *
+	 * @param int|null $user_id User ID (defaults to current user).
+	 * @return WP_Term[] Group terms, empty when the viewer has none.
+	 */
+	public static function get_visible_groups( $user_id = null ) {
+		$user_id = $user_id ? (int) $user_id : get_current_user_id();
+
+		if ( ! $user_id || ! taxonomy_exists( 'ans_group' ) ) {
+			return array();
+		}
+
+		if ( self::is_manager( $user_id ) ) {
+			$terms = get_terms(
+				array(
+					'taxonomy'   => 'ans_group',
+					'hide_empty' => false,
+				)
+			);
+			return is_wp_error( $terms ) ? array() : $terms;
+		}
+
+		$slugs = self::get_user_group_slugs( $user_id );
+		if ( empty( $slugs ) ) {
+			return array();
+		}
+
+		$terms = get_terms(
+			array(
+				'taxonomy'   => 'ans_group',
+				'hide_empty' => false,
+				'slug'       => $slugs,
+			)
+		);
+
+		return is_wp_error( $terms ) ? array() : $terms;
+	}
+
+	/**
 	 * The voice parts of a user's linked singer profile (canonical `parts`
 	 * meta, with the legacy single `voice_part` fallback).
 	 *

@@ -4,7 +4,7 @@ Tags: members, portal, choir, private, materials
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.10.0
+Stable tag: 1.11.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -70,6 +70,13 @@ Deactivation removes nothing. Uninstall also keeps everything by default; define
 Since 1.2.0 there are no per-material grants: any logged-in portal member sees every material in a project they can access. Give the guest a portal account (Roster → Send portal invite) and, if the project is group-tagged, add them to that group (e.g. Special Guests).
 
 == Changelog ==
+
+= 1.11.0 =
+* Materials is now one tab per group. A singer in the full choir sees one tab named for their ensemble; someone in both the full choir and Chamber Singers sees both, because the two rehearse separately and their music has always lived in different places. Tab labels come from the group's own name, so renaming a group in wp-admin renames the tab.
+* Each Materials tab is scoped to its group's projects, so a Chamber Singers tab can never show a full-choir project.
+* A viewer with no group still gets one unscoped Materials tab, so a singer who registers before anyone assigns them is not met with an empty portal.
+* The portal heading now names the audience rather than repeating the page title: "Singers Portal", or "Board Portal" for the ans_board role. New ansp_portal_name filter.
+
 
 = 1.10.0 =
 * Access codes now carry a GROUP. Anyone registering with a code is added to

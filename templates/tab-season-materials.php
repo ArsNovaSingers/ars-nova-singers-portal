@@ -18,6 +18,23 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
 $ansp_viewer_id = get_current_user_id();
 $ansp_season    = ANSP_Taxonomies::get_current_season();
 
+/*
+ * Which group's materials this tab shows.
+ *
+ * Passed in by portal.php as `ansp_group_slug` for each materials-<slug>
+ * tab. Empty means "don't scope by group" — the fallback for a viewer with
+ * no group assigned, who should still see whatever is shared with everyone
+ * rather than an empty portal.
+ */
+$ansp_group_slug = isset( $ansp_group_slug ) ? sanitize_key( (string) $ansp_group_slug ) : '';
+$ansp_group      = '';
+if ( '' !== $ansp_group_slug && taxonomy_exists( 'ans_group' ) ) {
+	$ansp_group_term = get_term_by( 'slug', $ansp_group_slug, 'ans_group' );
+	if ( $ansp_group_term instanceof WP_Term ) {
+		$ansp_group = $ansp_group_term->name;
+	}
+}
+
 // ---- Query current-season, non-archived projects --------------------------
 $ansp_args = array(
 	'post_type'      => ANSP_CPT::POST_TYPE,
@@ -39,14 +56,27 @@ $ansp_args = array(
 		),
 	),
 );
+$ansp_tax = array();
 if ( $ansp_season instanceof WP_Term ) {
-	$ansp_args['tax_query'] = array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
-		array(
-			'taxonomy' => 'ans_season',
-			'field'    => 'term_id',
-			'terms'    => (int) $ansp_season->term_id,
-		),
+	$ansp_tax[] = array(
+		'taxonomy' => 'ans_season',
+		'field'    => 'term_id',
+		'terms'    => (int) $ansp_season->term_id,
 	);
+}
+if ( '' !== $ansp_group_slug ) {
+	// Only this group's projects. A Chamber Singers tab must never show a
+	// full-choir project, and vice versa — that separation is the reason
+	// these are two tabs rather than one list.
+	$ansp_tax[] = array(
+		'taxonomy' => 'ans_group',
+		'field'    => 'slug',
+		'terms'    => $ansp_group_slug,
+	);
+}
+if ( ! empty( $ansp_tax ) ) {
+	$ansp_tax['relation']      = 'AND';
+	$ansp_args['tax_query']    = $ansp_tax; // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
 }
 
 $ansp_query    = new WP_Query( $ansp_args );
@@ -59,7 +89,12 @@ foreach ( $ansp_query->posts as $ansp_maybe ) {
 ?>
 <h3 class="ansp-section-title">
 	<?php
-	if ( $ansp_season instanceof WP_Term ) {
+	if ( '' !== $ansp_group && $ansp_season instanceof WP_Term ) {
+		/* translators: 1: group name, 2: season name */
+		printf( esc_html__( '%1$s — %2$s', 'ans-singers-portal' ), esc_html( $ansp_group ), esc_html( $ansp_season->name ) );
+	} elseif ( '' !== $ansp_group ) {
+		printf( esc_html__( '%s — Materials', 'ans-singers-portal' ), esc_html( $ansp_group ) );
+	} elseif ( $ansp_season instanceof WP_Term ) {
 		/* translators: %s: season name */
 		printf( esc_html__( 'Season Materials — %s', 'ans-singers-portal' ), esc_html( $ansp_season->name ) );
 	} else {
@@ -84,7 +119,16 @@ if ( $ansp_season instanceof WP_Term ) {
 ?>
 
 <?php if ( empty( $ansp_projects ) ) : ?>
-	<p class="ansp-empty"><?php esc_html_e( 'No projects are available to you this season yet.', 'ans-singers-portal' ); ?></p>
+	<p class="ansp-empty">
+		<?php
+		if ( '' !== $ansp_group ) {
+			/* translators: %s: group name */
+			printf( esc_html__( 'Nothing has been posted for %s this season yet.', 'ans-singers-portal' ), esc_html( $ansp_group ) );
+		} else {
+			esc_html_e( 'No projects are available to you this season yet.', 'ans-singers-portal' );
+		}
+		?>
+	</p>
 <?php else : ?>
 	<div class="ansp-subtabs" data-ansp-subtabs>
 		<div class="ansp-subtab-nav" role="tablist" aria-label="<?php esc_attr_e( 'Projects', 'ans-singers-portal' ); ?>">
@@ -94,7 +138,7 @@ if ( $ansp_season instanceof WP_Term ) {
 					type="button"
 					class="ansp-subtab<?php echo $ansp_first ? ' is-active' : ''; ?>"
 					role="tab"
-					data-ansp-subtab="project-<?php echo esc_attr( (string) $ansp_project->ID ); ?>"
+					data-ansp-subtab="project-<?php echo esc_attr( $ansp_group_slug . '-' . (string) $ansp_project->ID ); ?>"
 					aria-selected="<?php echo $ansp_first ? 'true' : 'false'; ?>"
 				><?php echo esc_html( get_the_title( $ansp_project ) ); ?></button>
 				<?php $ansp_first = false; ?>
@@ -114,7 +158,7 @@ if ( $ansp_season instanceof WP_Term ) {
 			?>
 			<div
 				class="ansp-subtab-panel<?php echo $ansp_first ? ' is-active' : ''; ?>"
-				data-ansp-subpanel="project-<?php echo esc_attr( (string) $ansp_pid ); ?>"
+				data-ansp-subpanel="project-<?php echo esc_attr( $ansp_group_slug . '-' . (string) $ansp_pid ); ?>"
 				role="tabpanel"
 				<?php echo $ansp_first ? '' : 'hidden'; ?>
 			>

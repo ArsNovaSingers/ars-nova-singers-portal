@@ -21,7 +21,6 @@ $ansp_tabs = array(
 	'bio'              => __( 'My Bio', 'ans-singers-portal' ),
 	'roster'           => __( 'Roster', 'ans-singers-portal' ),
 	'calendar'         => __( 'Calendar', 'ans-singers-portal' ),
-	'season-materials' => __( 'Season Materials', 'ans-singers-portal' ),
 
 	/*
 	 * Past Projects — HIDDEN 2026-08-20 at Jonathan's request.
@@ -31,6 +30,54 @@ $ansp_tabs = array(
 	 */
 	// 'past-projects'    => __( 'Past Projects', 'ans-singers-portal' ),
 );
+
+/*
+ * One Materials tab per group the viewer is in.
+ *
+ * A singer in the full choir sees one tab and never learns Chamber Singers
+ * exists. Someone in both gets both — which is the real shape of the thing,
+ * since the two ensembles rehearse separately and their music has always
+ * lived in different places.
+ *
+ * Labels come from the group's own name, so renaming a group in wp-admin
+ * renames the tab. Nothing here hardcodes an ensemble.
+ *
+ * A viewer with no group at all still gets one unscoped Materials tab, so a
+ * singer who registers before anyone assigns them still sees whatever is
+ * shared with everyone rather than an empty portal.
+ */
+/*
+ * Which portal this is.
+ *
+ * One site, one /portal/ page, several audiences. The WordPress page title
+ * above says "Ars Nova Portal" — the house — and this line says which room
+ * you are in. Saying "Singers Portal" in both places was just an echo.
+ *
+ * Board members get their own name here and their own tab set via the
+ * ansp_portal_tabs filter, rather than a second page to maintain.
+ */
+$ansp_portal_name = __( 'Singers Portal', 'ans-singers-portal' );
+if ( in_array( 'ans_board', (array) $ansp_user->roles, true ) ) {
+	$ansp_portal_name = __( 'Board Portal', 'ans-singers-portal' );
+}
+
+/**
+ * Filter the portal's audience name, shown under the page title.
+ *
+ * @param string  $ansp_portal_name Portal name.
+ * @param WP_User $ansp_user        Current user.
+ */
+$ansp_portal_name = apply_filters( 'ansp_portal_name', $ansp_portal_name, $ansp_user );
+
+$ansp_groups = ANSP_Permissions::get_visible_groups( $ansp_user->ID );
+
+if ( empty( $ansp_groups ) ) {
+	$ansp_tabs['season-materials'] = __( 'Season Materials', 'ans-singers-portal' );
+} else {
+	foreach ( $ansp_groups as $ansp_group ) {
+		$ansp_tabs[ 'materials-' . $ansp_group->slug ] = $ansp_group->name;
+	}
+}
 
 /**
  * Filter the singer-facing portal tabs.
@@ -42,7 +89,7 @@ $ansp_tabs = apply_filters( 'ansp_portal_tabs', $ansp_tabs );
 <div class="ansp-portal" id="ansp-portal">
 
 	<header class="ansp-portal-header">
-		<h2 class="ansp-portal-title"><?php esc_html_e( 'Singers Portal', 'ans-singers-portal' ); ?></h2>
+		<h2 class="ansp-portal-title"><?php echo esc_html( $ansp_portal_name ); ?></h2>
 		<p class="ansp-portal-welcome">
 			<?php
 			/* translators: %s: user display name */
@@ -83,7 +130,20 @@ $ansp_tabs = apply_filters( 'ansp_portal_tabs', $ansp_tabs );
 			aria-labelledby="tab-btn-<?php echo esc_attr( $ansp_tab_id ); ?>"
 			<?php echo $ansp_first ? '' : 'hidden'; ?>
 		>
-			<?php ansp_get_template( 'tab-' . $ansp_tab_id ); ?>
+			<?php
+			/*
+			 * materials-<group-slug> tabs all render the same template,
+			 * scoped to their group. Everything else maps to tab-<id>.php.
+			 */
+			if ( 0 === strpos( $ansp_tab_id, 'materials-' ) ) {
+				ansp_get_template(
+					'tab-season-materials',
+					array( 'ansp_group_slug' => substr( $ansp_tab_id, strlen( 'materials-' ) ) )
+				);
+			} else {
+				ansp_get_template( 'tab-' . $ansp_tab_id );
+			}
+			?>
 		</section>
 		<?php $ansp_first = false; ?>
 	<?php endforeach; ?>

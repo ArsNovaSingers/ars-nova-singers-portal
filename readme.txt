@@ -4,7 +4,7 @@ Tags: members, portal, choir, private, materials
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.13.0
+Stable tag: 1.13.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -70,6 +70,10 @@ Deactivation removes nothing. Uninstall also keeps everything by default; define
 Since 1.2.0 there are no per-material grants: any logged-in portal member sees every material in a project they can access. Give the guest a portal account (Roster → Send portal invite) and, if the project is group-tagged, add them to that group (e.g. Special Guests).
 
 == Changelog ==
+
+= 1.13.1 =
+* POST /portal/groups can now CREATE a group, with an optional parent, so the tree can be built by command rather than by hand. Creating requires an explicit create=true — a typo in a slug should be an error, not a silent new group, because group names are singer-facing tab labels.
+* That route is now covered by the production guard like every other write.
 
 = 1.13.0 =
 * Groups are now a tree, and only TOP-LEVEL groups become Materials tabs. Nest Ensemble Singers and High School Apprentice under Ars Nova Singers and their members open the Ars Nova Singers tab, where they find the full chorus's projects plus anything tagged for their own subgroup. The rule is "has no parent", not "has children" — Chamber Singers has no children and still gets its own tab.

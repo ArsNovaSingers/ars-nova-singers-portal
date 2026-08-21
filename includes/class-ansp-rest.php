@@ -247,6 +247,11 @@ class ANSP_REST {
 	 * @return array|WP_Error
 	 */
 	public function update_group( $req ) {
+		$guard = self::guard( $req );
+		if ( is_wp_error( $guard ) ) {
+			return $guard;
+		}
+
 		$term_id = (int) $req->get_param( 'term_id' );
 		$slug    = sanitize_key( (string) $req->get_param( 'slug' ) );
 
@@ -256,8 +261,41 @@ class ANSP_REST {
 				$term_id = (int) $found->term_id;
 			}
 		}
+
+		/*
+		 * Creating requires create=true rather than happening whenever a slug
+		 * does not match. A typo in a slug should be an error, not a silent
+		 * new group — groups are singer-facing tab labels.
+		 */
+		if ( ! $term_id && filter_var( $req->get_param( 'create' ), FILTER_VALIDATE_BOOLEAN ) ) {
+			$name = trim( (string) $req->get_param( 'name' ) );
+			if ( '' === $name ) {
+				return new WP_Error( 'ansp_no_name', 'A new group needs a name.', array( 'status' => 400 ) );
+			}
+
+			$args = array();
+			if ( '' !== $slug ) {
+				$args['slug'] = $slug;
+			}
+
+			$parent_slug = $req->get_param( 'parent_slug' );
+			if ( null !== $parent_slug && '' !== sanitize_key( (string) $parent_slug ) ) {
+				$parent_term = get_term_by( 'slug', sanitize_key( (string) $parent_slug ), 'ans_group' );
+				if ( ! $parent_term instanceof WP_Term ) {
+					return new WP_Error( 'ansp_no_parent', 'No group has that parent_slug.', array( 'status' => 400 ) );
+				}
+				$args['parent'] = (int) $parent_term->term_id;
+			}
+
+			$made = wp_insert_term( sanitize_text_field( $name ), 'ans_group', $args );
+			if ( is_wp_error( $made ) ) {
+				return $made;
+			}
+			$term_id = (int) $made['term_id'];
+		}
+
 		if ( ! $term_id ) {
-			return new WP_Error( 'ansp_no_group', 'Pass term_id or slug of an existing group.', array( 'status' => 400 ) );
+			return new WP_Error( 'ansp_no_group', 'Pass term_id or slug of an existing group, or create=true with a name.', array( 'status' => 400 ) );
 		}
 
 		$name = $req->get_param( 'name' );

@@ -97,13 +97,55 @@ class ANSP_Permissions {
 		}
 
 		if ( self::is_manager( $user_id ) ) {
+			/*
+			 * Managers get every group that actually has projects — not every
+			 * group that exists.
+			 *
+			 * The groups on this site are not two ensembles; they are Full
+			 * Chorus, Chamber Singers, Ensemble Singers, Board Member, High
+			 * School Apprentice and Administrator. Handing an admin one
+			 * Materials tab per group would put six tabs across the top, most
+			 * of them permanently empty, and bury the two that hold music.
+			 *
+			 * hide_empty is about the taxonomy count, which includes singers,
+			 * so it cannot answer "does this group have PROJECTS". Ask that
+			 * directly.
+			 */
 			$terms = get_terms(
 				array(
 					'taxonomy'   => 'ans_group',
 					'hide_empty' => false,
 				)
 			);
-			return is_wp_error( $terms ) ? array() : $terms;
+			if ( is_wp_error( $terms ) ) {
+				return array();
+			}
+
+			$with_projects = array();
+			foreach ( $terms as $term ) {
+				$found = get_posts(
+					array(
+						'post_type'      => ANSP_CPT::POST_TYPE,
+						'post_status'    => 'publish',
+						'posts_per_page' => 1,
+						'fields'         => 'ids',
+						'no_found_rows'  => true,
+						// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
+						'tax_query'      => array(
+							array(
+								'taxonomy' => 'ans_group',
+								'field'    => 'term_id',
+								'terms'    => (int) $term->term_id,
+							),
+						),
+					)
+				);
+				if ( ! empty( $found ) ) {
+					$with_projects[] = $term;
+				}
+			}
+
+			return $with_projects;
 		}
 
 		$slugs = self::get_user_group_slugs( $user_id );

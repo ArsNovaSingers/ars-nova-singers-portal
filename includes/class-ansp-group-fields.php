@@ -45,6 +45,7 @@ class ANSP_Group_Fields {
 	const META_FOLDER_STATE = 'ansp_group_drive_status';
 	const META_FOLDER_TIME  = 'ansp_group_drive_checked';
 	const META_TAG          = 'ansp_group_tag';
+	const META_NO_TAB       = 'ansp_group_no_tab';
 
 	/** Drive scope. Read-only: this plugin never writes to Drive. */
 	const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
@@ -351,6 +352,16 @@ class ANSP_Group_Fields {
 				<?php esc_html_e( 'Used to sort and filter materials, and to find this group\'s files on a phone or iPad. Not an access control — the folder above decides who can see what. Type it without the underscore.', 'ans-singers-portal' ); ?>
 			</p>
 		</div>
+		<div class="form-field">
+			<input type="hidden" name="ansp_group_no_tab_present" value="1" />
+			<label for="ansp_group_no_tab">
+				<input type="checkbox" name="ansp_group_no_tab" id="ansp_group_no_tab" value="1" />
+				<?php esc_html_e( 'Do not create a tab', 'ans-singers-portal' ); ?>
+			</label>
+			<p class="description">
+				<?php esc_html_e( 'A top-level group becomes a Materials tab in the portal; a group nested under another one rolls up into its parent\'s tab instead. Tick this to keep a top-level group out of the portal entirely — for a group that scopes projects without naming an ensemble.', 'ans-singers-portal' ); ?>
+			</p>
+		</div>
 		<?php
 	}
 
@@ -424,6 +435,25 @@ class ANSP_Group_Fields {
 				</p>
 			</td>
 		</tr>
+		<tr class="form-field">
+			<th scope="row"><?php esc_html_e( 'Portal tab', 'ans-singers-portal' ); ?></th>
+			<td>
+				<input type="hidden" name="ansp_group_no_tab_present" value="1" />
+				<label for="ansp_group_no_tab">
+					<input type="checkbox" name="ansp_group_no_tab" id="ansp_group_no_tab" value="1" <?php checked( (bool) get_term_meta( (int) $term->term_id, self::META_NO_TAB, true ) ); ?> />
+					<?php esc_html_e( 'Do not create a tab', 'ans-singers-portal' ); ?>
+				</label>
+				<p class="description">
+					<?php
+					if ( 0 === (int) $term->parent ) {
+						esc_html_e( 'This is a top-level group, so it becomes a Materials tab in the portal once it has a project. Tick the box to keep it out of the portal entirely — for a group that scopes projects without naming an ensemble.', 'ans-singers-portal' );
+					} else {
+						esc_html_e( 'This group is nested, so it never becomes its own tab — its projects and materials appear inside its parent\'s tab, for the singers who are in it. The box has no effect here.', 'ans-singers-portal' );
+					}
+					?>
+				</p>
+			</td>
+		</tr>
 		<?php
 	}
 
@@ -449,6 +479,19 @@ class ANSP_Group_Fields {
 
 		$term_id = (int) $term_id;
 		$notices = array();
+
+		/*
+		 * "Do not create a tab". A checkbox posts nothing when unchecked, so a
+		 * hidden companion field marks that our form was the one submitted —
+		 * otherwise unticking it could never be saved.
+		 */
+		if ( isset( $_POST['ansp_group_no_tab_present'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- core term nonce verified by edit-tags.php.
+			if ( empty( $_POST['ansp_group_no_tab'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
+				delete_term_meta( $term_id, self::META_NO_TAB );
+			} else {
+				update_term_meta( $term_id, self::META_NO_TAB, 1 );
+			}
+		}
 
 		/*
 		 * Filter tag. Defaults to the term slug so a new group is usable

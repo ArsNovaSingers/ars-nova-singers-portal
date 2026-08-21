@@ -28,6 +28,7 @@ $ansp_season    = ANSP_Taxonomies::get_current_season();
  */
 $ansp_group_slug = isset( $ansp_group_slug ) ? sanitize_key( (string) $ansp_group_slug ) : '';
 $ansp_group      = '';
+$ansp_group_term = null;
 if ( '' !== $ansp_group_slug && taxonomy_exists( 'ans_group' ) ) {
 	$ansp_group_term = get_term_by( 'slug', $ansp_group_slug, 'ans_group' );
 	if ( $ansp_group_term instanceof WP_Term ) {
@@ -64,14 +65,23 @@ if ( $ansp_season instanceof WP_Term ) {
 		'terms'    => (int) $ansp_season->term_id,
 	);
 }
-if ( '' !== $ansp_group_slug ) {
-	// Only this group's projects. A Chamber Singers tab must never show a
-	// full-choir project, and vice versa — that separation is the reason
-	// these are two tabs rather than one list.
+if ( $ansp_group_term instanceof WP_Term ) {
+	/*
+	 * This group's projects, AND those of anything nested under it. A tab
+	 * belongs to a top-level group, so an "Ensemble Singers" project has to
+	 * surface inside the "Ars Nova Singers" tab or nesting means nothing.
+	 *
+	 * By term_id, not slug: include_children is dependable on IDs, and this
+	 * is not a place to hope WordPress resolves it the way we assumed.
+	 *
+	 * Chamber Singers still never appears in a full-choir tab — it is a
+	 * separate top-level tree, not a descendant.
+	 */
 	$ansp_tax[] = array(
-		'taxonomy' => 'ans_group',
-		'field'    => 'slug',
-		'terms'    => $ansp_group_slug,
+		'taxonomy'         => 'ans_group',
+		'field'            => 'term_id',
+		'terms'            => (int) $ansp_group_term->term_id,
+		'include_children' => true,
 	);
 }
 if ( ! empty( $ansp_tax ) ) {

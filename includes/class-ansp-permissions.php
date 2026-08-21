@@ -72,22 +72,123 @@ class ANSP_Permissions {
 	}
 
 	/**
-	 * The groups a viewer should get their own Materials tab for.
+	 * A user's EFFECTIVE group slugs: the groups on their profile PLUS every
+	 * ancestor of those groups.
 	 *
-	 * A singer in one group gets one tab and never learns the others exist.
-	 * Someone in both — the February concert pairs the full choir with
-	 * Chamber Singers — gets both, which is the whole point: their music
-	 * lives in two different places and always has.
+	 * ans_group is a tree. Top-level terms are ensembles and make Materials
+	 * tabs; children are labels that roll up — an Ensemble Singer and a High
+	 * School Apprentice both sing in the full chorus. Every access check in
+	 * this class is an array_intersect against the user's groups, so without
+	 * this expansion a singer tagged ONLY with a child group is HIDDEN from
+	 * their own ensemble's music: intersect(['main'], ['ensemble-singers'])
+	 * is empty. That is the opposite of what nesting is supposed to mean.
 	 *
-	 * Managers see every group, because the person setting materials up has
-	 * to be able to look at what each group will actually see.
-	 *
-	 * Returns terms, not slugs, so the caller can label a tab with the
-	 * group's own name. Rename the group in wp-admin and the tab follows —
-	 * nothing here hardcodes "Chamber Singers".
+	 * Inheritance runs one way, upward. Being in the full chorus does not
+	 * grant Ensemble Singers material; being an Ensemble Singer grants full
+	 * chorus material.
 	 *
 	 * @param int|null $user_id User ID (defaults to current user).
-	 * @return WP_Term[] Group terms, empty when the viewer has none.
+	 * @return string[] Group slugs, own + inherited, deduped.
+	 */
+	public static function get_user_effective_group_slugs( $user_id = null ) {
+		$slugs = self::get_user_group_slugs( $user_id );
+		if ( empty( $slugs ) || ! taxonomy_exists( 'ans_group' ) ) {
+			return $slugs;
+		}
+
+		$out = $slugs;
+		foreach ( $slugs as $slug ) {
+			$term = get_term_by( 'slug', $slug, 'ans_group' );
+			if ( ! $term instanceof WP_Term ) {
+				continue;
+			}
+			foreach ( get_ancestors( (int) $term->term_id, 'ans_group', 'taxonomy' ) as $ancestor_id ) {
+				$ancestor = get_term( (int) $ancestor_id, 'ans_group' );
+				if ( $ancestor instanceof WP_Term && ! in_array( $ancestor->slug, $out, true ) ) {
+					$out[] = $ancestor->slug;
+				}
+			}
+		}
+
+		return $out;
+	}
+
+	/**
+	 * The top-level ancestor of a group term, or the term itself when it is
+	 * already top-level. This is the term whose name becomes a tab label.
+	 *
+	 * @param WP_Term $term Group term.
+	 * @return WP_Term
+	 */
+	protected static function top_level_group( $term ) {
+		$ancestors = get_ancestors( (int) $term->term_id, 'ans_group', 'taxonomy' );
+		if ( empty( $ancestors ) ) {
+			return $term;
+		}
+		// get_ancestors() returns nearest-first, so the last entry is the root.
+		$top = get_term( (int) end( $ancestors ), 'ans_group' );
+		return $top instanceof WP_Term ? $top : $term;
+	}
+
+	/**
+	 * Does this group, or anything nested under it, have a published project?
+	 *
+	 * Descendants count: a project tagged only "Ensemble Singers" is a reason
+	 * for the "Ars Nova Singers" tab to exist. hide_empty cannot answer this
+	 * because the taxonomy count includes singers.
+	 *
+	 * @param int $term_id Group term ID.
+	 * @return bool
+	 */
+	protected static function group_has_projects( $term_id ) {
+		$found = get_posts(
+			array(
+				'post_type'      => ANSP_CPT::POST_TYPE,
+				'post_status'    => 'publish',
+				'posts_per_page' => 1,
+				'fields'         => 'ids',
+				'no_found_rows'  => true,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
+				'tax_query'      => array(
+					array(
+						'taxonomy'         => 'ans_group',
+						'field'            => 'term_id',
+						'terms'            => (int) $term_id,
+						'include_children' => true,
+					),
+				),
+			)
+		);
+
+		return ! empty( $found );
+	}
+
+	/**
+	 * The groups a viewer gets their own Materials tab for.
+	 *
+	 * TOP-LEVEL GROUPS MAKE TABS. Children never do — they roll up into their
+	 * parent's tab. An Ensemble Singer opens "Ars Nova Singers" and finds the
+	 * full chorus's projects plus anything tagged for Ensemble, which is what
+	 * nesting them under it is supposed to mean.
+	 *
+	 * The rule is "has no parent", NOT "has children": Chamber Singers has no
+	 * children and still needs its own tab.
+	 *
+	 * Two things suppress a top-level group:
+	 *
+	 * - The "Do not create a tab" checkbox. An explicit opt-out for a group
+	 *   that scopes projects without naming an ensemble — Board Member, whose
+	 *   materials belong in the Board Portal and not in front of singers.
+	 * - Having no projects anywhere in its subtree. This is also what keeps a
+	 *   term someone created by accident (Add New Group defaults Parent to
+	 *   "None") from silently appearing as a tab: it stays invisible until
+	 *   somebody also tags a project to it.
+	 *
+	 * Managers get every top-level group that survives those two tests, not
+	 * one per group they happen to belong to.
+	 *
+	 * @param int|null $user_id User ID (defaults to current user).
+	 * @return WP_Term[] Top-level groups, in taxonomy order.
 	 */
 	public static function get_visible_groups( $user_id = null ) {
 		$user_id = $user_id ? (int) $user_id : get_current_user_id();
@@ -97,71 +198,59 @@ class ANSP_Permissions {
 		}
 
 		if ( self::is_manager( $user_id ) ) {
-			/*
-			 * Managers get every group that actually has projects — not every
-			 * group that exists.
-			 *
-			 * The groups on this site are not two ensembles; they are Full
-			 * Chorus, Chamber Singers, Ensemble Singers, Board Member, High
-			 * School Apprentice and Administrator. Handing an admin one
-			 * Materials tab per group would put six tabs across the top, most
-			 * of them permanently empty, and bury the two that hold music.
-			 *
-			 * hide_empty is about the taxonomy count, which includes singers,
-			 * so it cannot answer "does this group have PROJECTS". Ask that
-			 * directly.
-			 */
+			$candidates = get_terms(
+				array(
+					'taxonomy'   => 'ans_group',
+					'hide_empty' => false,
+					'parent'     => 0,
+				)
+			);
+			if ( is_wp_error( $candidates ) ) {
+				return array();
+			}
+		} else {
+			$slugs = self::get_user_group_slugs( $user_id );
+			if ( empty( $slugs ) ) {
+				return array();
+			}
+
 			$terms = get_terms(
 				array(
 					'taxonomy'   => 'ans_group',
 					'hide_empty' => false,
+					'slug'       => $slugs,
 				)
 			);
 			if ( is_wp_error( $terms ) ) {
 				return array();
 			}
 
-			$with_projects = array();
+			// Resolve each membership up to the term that owns the tab, and
+			// dedupe — someone in both Ensemble Singers and the full chorus
+			// must not get the same tab twice.
+			$candidates = array();
+			$seen       = array();
 			foreach ( $terms as $term ) {
-				$found = get_posts(
-					array(
-						'post_type'      => ANSP_CPT::POST_TYPE,
-						'post_status'    => 'publish',
-						'posts_per_page' => 1,
-						'fields'         => 'ids',
-						'no_found_rows'  => true,
-						// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
-						'tax_query'      => array(
-							array(
-								'taxonomy' => 'ans_group',
-								'field'    => 'term_id',
-								'terms'    => (int) $term->term_id,
-							),
-						),
-					)
-				);
-				if ( ! empty( $found ) ) {
-					$with_projects[] = $term;
+				$top = self::top_level_group( $term );
+				if ( ! in_array( (int) $top->term_id, $seen, true ) ) {
+					$seen[]       = (int) $top->term_id;
+					$candidates[] = $top;
 				}
 			}
-
-			return $with_projects;
 		}
 
-		$slugs = self::get_user_group_slugs( $user_id );
-		if ( empty( $slugs ) ) {
-			return array();
+		$out = array();
+		foreach ( $candidates as $term ) {
+			if ( get_term_meta( (int) $term->term_id, ANSP_Group_Fields::META_NO_TAB, true ) ) {
+				continue;
+			}
+			if ( ! self::group_has_projects( (int) $term->term_id ) ) {
+				continue;
+			}
+			$out[] = $term;
 		}
 
-		$terms = get_terms(
-			array(
-				'taxonomy'   => 'ans_group',
-				'hide_empty' => false,
-				'slug'       => $slugs,
-			)
-		);
-
-		return is_wp_error( $terms ) ? array() : $terms;
+		return $out;
 	}
 
 	/**
@@ -226,7 +315,7 @@ class ANSP_Permissions {
 				if ( empty( $mgroups ) ) {
 					return true;
 				}
-				return (bool) array_intersect( $mgroups, self::get_user_group_slugs( $user_id ) );
+				return (bool) array_intersect( $mgroups, self::get_user_effective_group_slugs( $user_id ) );
 			}
 
 			// Group-scoped pseudo-items (Announcements): visible when marked
@@ -252,7 +341,7 @@ class ANSP_Permissions {
 			return true;
 		}
 
-		$user_groups = self::get_user_group_slugs( $user_id );
+		$user_groups = self::get_user_effective_group_slugs( $user_id );
 		return (bool) array_intersect( $project_groups, $user_groups );
 	}
 
@@ -281,7 +370,7 @@ class ANSP_Permissions {
 		if ( empty( $groups ) ) {
 			return false;
 		}
-		return (bool) array_intersect( $groups, self::get_user_group_slugs( $user_id ) );
+		return (bool) array_intersect( $groups, self::get_user_effective_group_slugs( $user_id ) );
 	}
 
 	/**
@@ -308,7 +397,7 @@ class ANSP_Permissions {
 		if ( $is_manager ) {
 			return $all;
 		}
-		$user_groups = self::get_user_group_slugs( $user_id );
+		$user_groups = self::get_user_effective_group_slugs( $user_id );
 		$visible     = array();
 		foreach ( $all as $row ) {
 			$groups = ANSP_Materials::get_groups( $row );

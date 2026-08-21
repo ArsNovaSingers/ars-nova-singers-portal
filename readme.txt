@@ -4,7 +4,7 @@ Tags: members, portal, choir, private, materials
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.12.0
+Stable tag: 1.13.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -70,6 +70,13 @@ Deactivation removes nothing. Uninstall also keeps everything by default; define
 Since 1.2.0 there are no per-material grants: any logged-in portal member sees every material in a project they can access. Give the guest a portal account (Roster → Send portal invite) and, if the project is group-tagged, add them to that group (e.g. Special Guests).
 
 == Changelog ==
+
+= 1.13.0 =
+* Groups are now a tree, and only TOP-LEVEL groups become Materials tabs. Nest Ensemble Singers and High School Apprentice under Ars Nova Singers and their members open the Ars Nova Singers tab, where they find the full chorus's projects plus anything tagged for their own subgroup. The rule is "has no parent", not "has children" — Chamber Singers has no children and still gets its own tab.
+* Fixes the bug that made this necessary: a singer tagged only with a subgroup was HIDDEN from their own ensemble's music, because every access check intersects the material's groups against the singer's and the parent was never in that list. A singer's groups now include every ancestor. Inheritance runs one way — being in the full chorus does not grant Ensemble Singers material.
+* New "Do not create a tab" checkbox on each group. The hierarchy still decides; the box can only ever suppress a tab, never create one. It is there for a top-level group that scopes projects without naming an ensemble — Board Member, whose materials belong in the Board Portal rather than in front of singers.
+* A top-level group with no projects anywhere beneath it still makes no tab, which is what keeps a group someone created by accident from appearing in front of the choir before anyone notices.
+* The REST group routes now read and write the tree: parent, parent_slug, is_top_level and no_tab.
 
 = 1.12.0 =
 * New admin-only REST surface covering everything the portal owns: status, groups, seasons, projects, materials, announcements, singers, settings, access codes, and trash. The portal's content types are deliberately not public in the REST API, which meant nobody could read or repair portal data by API — only by clicking through wp-admin. This closes that gap without opening any of it to the public.

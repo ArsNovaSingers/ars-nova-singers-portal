@@ -215,11 +215,17 @@ class ANSP_REST {
 
 		$items = array();
 		foreach ( $terms as $t ) {
+			$parent = (int) $t->parent ? get_term( (int) $t->parent, 'ans_group' ) : null;
+
 			$items[] = array(
 				'term_id'           => (int) $t->term_id,
 				'name'              => $t->name,
 				'slug'              => $t->slug,
 				'description'       => $t->description,
+				'parent'            => (int) $t->parent,
+				'parent_slug'       => $parent instanceof WP_Term ? $parent->slug : '',
+				'is_top_level'      => 0 === (int) $t->parent,
+				'no_tab'            => (bool) get_term_meta( (int) $t->term_id, ANSP_Group_Fields::META_NO_TAB, true ),
 				'singer_count'      => (int) $t->count,
 				'drive_folder_id'   => get_term_meta( $t->term_id, 'ansp_group_drive_folder_id', true ),
 				'drive_folder_name' => get_term_meta( $t->term_id, 'ansp_group_drive_folder_name', true ),
@@ -270,12 +276,39 @@ class ANSP_REST {
 			update_term_meta( $term_id, 'ansp_group_tag', ANSP_Group_Fields::normalize_tag( (string) $tag ) );
 		}
 
+		// Re-parent. 0 makes a group top-level, which makes it a tab.
+		$parent = $req->get_param( 'parent_slug' );
+		if ( null !== $parent ) {
+			$parent      = sanitize_key( (string) $parent );
+			$parent_term = '' === $parent ? null : get_term_by( 'slug', $parent, 'ans_group' );
+
+			if ( '' !== $parent && ! $parent_term instanceof WP_Term ) {
+				return new WP_Error( 'ansp_no_parent', 'No group has that parent_slug.', array( 'status' => 400 ) );
+			}
+			if ( $parent_term instanceof WP_Term && (int) $parent_term->term_id === $term_id ) {
+				return new WP_Error( 'ansp_parent_self', 'A group cannot be its own parent.', array( 'status' => 400 ) );
+			}
+
+			wp_update_term( $term_id, 'ans_group', array( 'parent' => $parent_term instanceof WP_Term ? (int) $parent_term->term_id : 0 ) );
+		}
+
+		$no_tab = $req->get_param( 'no_tab' );
+		if ( null !== $no_tab ) {
+			if ( filter_var( $no_tab, FILTER_VALIDATE_BOOLEAN ) ) {
+				update_term_meta( $term_id, ANSP_Group_Fields::META_NO_TAB, 1 );
+			} else {
+				delete_term_meta( $term_id, ANSP_Group_Fields::META_NO_TAB );
+			}
+		}
+
 		$term = get_term( $term_id, 'ans_group' );
 		return array(
 			'ok'         => true,
 			'term_id'    => $term_id,
 			'name'       => $term instanceof WP_Term ? $term->name : '',
 			'slug'       => $term instanceof WP_Term ? $term->slug : '',
+			'parent'     => $term instanceof WP_Term ? (int) $term->parent : 0,
+			'no_tab'     => (bool) get_term_meta( $term_id, ANSP_Group_Fields::META_NO_TAB, true ),
 			'drive_folder_id' => get_term_meta( $term_id, 'ansp_group_drive_folder_id', true ),
 			'filter_tag'      => get_term_meta( $term_id, 'ansp_group_tag', true ),
 		);

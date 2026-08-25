@@ -2,8 +2,8 @@
 /**
  * Plugin Name:       Ars Nova Singers Portal
  * Plugin URI:        https://arsnovasingers.org/
- * Description:       Login-gated members portal for the Ars Nova Singers choir: seasons, projects, materials with unlimited free-form tags + a singer-side tag filter, roster, calendars, announcements, RSVPs, front-end singer bios with Gemini "Compose with AI", and the absorbed "singer" directory (CPT, profile details, public bio pages). Groups carry a Google Drive folder mapping — the folder is the access gate for a group's materials. No ACF or other plugin dependencies.
- * Version:           1.13.2
+ * Description:       Login-gated members portal for the Ars Nova Singers choir: seasons, projects, materials listed with tags, a singer-side tag filter and bulk .zip download, roster, calendars, announcements, RSVPs, front-end singer bios with Gemini "Compose with AI", and the absorbed "singer" directory (CPT, profile details, public bio pages). Groups carry a Google Drive folder mapping — the folder is the access gate for a group's materials. No ACF or other plugin dependencies.
+ * Version:           1.14.0-beta.2
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Ars Nova Singers
@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
  * Constants
  * -------------------------------------------------------------------------
  */
-define( 'ANSP_VERSION', '1.13.2' );
+define( 'ANSP_VERSION', '1.14.0-beta.2' );
 define( 'ANSP_FILE', __FILE__ );
 define( 'ANSP_DIR', plugin_dir_path( __FILE__ ) );
 define( 'ANSP_URL', plugin_dir_url( __FILE__ ) );
@@ -43,6 +43,7 @@ require_once ANSP_DIR . 'includes/class-ansp-invitations.php';
 require_once ANSP_DIR . 'includes/class-ansp-cpt.php';
 require_once ANSP_DIR . 'includes/class-ansp-permissions.php';
 require_once ANSP_DIR . 'includes/class-ansp-materials.php';
+require_once ANSP_DIR . 'includes/class-ansp-materials-zip.php';
 require_once ANSP_DIR . 'includes/class-ansp-project-meta.php';
 require_once ANSP_DIR . 'includes/class-ansp-profiles.php';
 require_once ANSP_DIR . 'includes/class-ansp-login.php';
@@ -86,6 +87,7 @@ function ansp_init() {
 	new ANSP_Invitations();   // send codes + track who acted on them.
 	new ANSP_CPT();
 	new ANSP_Materials();
+	new ANSP_Materials_Zip(); // Server-side single + bulk .zip download of materials.
 	new ANSP_Project_Meta();
 	new ANSP_Profiles();
 	new ANSP_Login();

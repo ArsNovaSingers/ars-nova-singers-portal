@@ -4,11 +4,11 @@ Tags: members, portal, choir, private, materials
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.13.2
+Stable tag: 1.14.0-beta.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-A login-gated members portal for the Ars Nova Singers choir: season projects, materials with unlimited free-form tags + a singer-side tag filter, roster, calendars, announcements, RSVPs and front-end singer bios.
+A login-gated members portal for the Ars Nova Singers choir: season projects, materials listed with free-form tags, a singer-side tag filter and bulk .zip download, roster, calendars, announcements, RSVPs and front-end singer bios.
 
 == Description ==
 
@@ -21,7 +21,7 @@ Ars Nova Singers Portal adds a private, mobile-first member area to your existin
   * **My Bio** — edit their own canonical profile from the front end: display name, voice part(s), email, headshot upload (Featured Image), pronouns, years with the group, favorite piece/quote, bio (post content), phone — with per-field "visible to choir" privacy toggles and a Gemini **"Compose with AI"** bio-drafting button.
   * **Roster** — the singers in their group(s), showing only choir-visible fields.
   * **Calendar** — embedded Google Calendars for their group(s) plus one-click Google/iCal subscribe links.
-  * **Season Materials** — the current season's brief, then one sub-tab per project they can see; every material of the project is listed with its tag chips, previews inline (Google Drive previews, video embeds, images, audio) and stays hosted in Drive. A **"Filter by tag"** control (All / None + one toggle per tag, everything selected by default) lets each singer narrow the list live — e.g. just "Soprano" + "Video".
+  * **Season Materials** — the current season's brief, then one sub-tab per project they can see; every material of the project is listed as a compact row with its tag chips — open it, download it, or tick several and take them all as one .zip. Files stay hosted in Drive; downloads are fetched server-side so they work whether or not the singer has their own Google access. A **"Filter by tag"** control (All / None + one toggle per tag, everything selected by default) lets each singer narrow the list live — e.g. just "Soprano" + "Video".
   * **Past Projects** — archived projects, read-only.
 * Lightweight per-project **RSVP** (yes / maybe / no).
 
@@ -55,7 +55,7 @@ Since 1.1.0 the Portal fully absorbs it: same `singer` post type, same meta keys
 
 = Where are material files stored? =
 
-In Google Drive (or wherever the pasted URL points). The plugin stores links only, and previews Drive files inline via Drive's `/preview` embed.
+In Google Drive (or wherever the pasted URL points). The plugin stores links only. Since 1.14.0 nothing is embedded in the page: each material is a row with Open and Download, and Download (single or bulk .zip) is fetched through the site using the Google Connector's service-account token — so a singer gets their music whether or not they are signed in to Google.
 
 = How do singers log in? =
 
@@ -70,6 +70,15 @@ Deactivation removes nothing. Uninstall also keeps everything by default; define
 Since 1.2.0 there are no per-material grants: any logged-in portal member sees every material in a project they can access. Give the guest a portal account (Roster → Send portal invite) and, if the project is group-tagged, add them to that group (e.g. Special Guests).
 
 == Changelog ==
+
+= 1.14.0-beta.2 =
+* **Materials are a list, not a gallery.** Every inline preview is gone — the Google Drive/Docs iframe, the video embed, the audio player and the inline image. A project's materials are now one compact row each: the title leads, and the content type, tags and the Open/Download buttons share the bottom line — buttons left, type and tags right-justified. Twelve materials used to run several screens deep because four of them rendered as 460–940px iframes; they now fit on one screen, which is what a singer opened the page for.
+* **Bulk download.** Tick any number of materials and take them as a single .zip. Select all / Select none respect the tag filter, so narrowing to "Soprano" and hitting Select all gives you the soprano files and nothing else.
+* **Downloads are fetched server-side.** Materials are shared with the site's Google service account, not necessarily with each singer's own Google identity, so a link pointing straight at Drive worked for some people and not others — and failed like a broken link rather than a permissions problem. Single and bulk downloads now stream through the site using the Ars Nova Google Connector's token: what a singer can see in the portal is exactly what they can download.
+* Google-native Docs, Sheets and Slides have no raw bytes, so they are exported to PDF rather than skipped — the rehearsal doc is usually the most useful thing in the project.
+* Anything that could not be fetched is named in a NOT-INCLUDED.txt inside the archive. A singer who thinks they have all their music and does not is worse off than one who can see what is missing.
+* A material that is a link rather than a file (YouTube, an external page) gets no checkbox at all, so nobody selects something that would quietly fail to arrive.
+* The submitted list of material ids is never trusted: both download handlers re-derive the caller's visible set through the permissions engine and intersect, so a hand-crafted request cannot reach another group's materials. Bytes are streamed to disk rather than held in memory, so archive size is bounded by the limits (40 files, 100MB per file, 300MB total — all filterable) and not by PHP's memory_limit.
 
 = 1.13.2 =
 * The public Meet the Singers grid now shows name and voice part only. Pronouns and profession are no longer printed there - they remain on the singer's own profile and on the portal roster, which is where the per-field privacy toggles actually apply.
@@ -132,6 +141,9 @@ Since 1.2.0 there are no per-material grants: any logged-in portal member sees e
 * Initial release: portal shortcode with six tabs, ans_project CPT, ans_group + ans_season taxonomies, materials with per-item permissions, visibility engine, roster with per-field privacy, Google Calendar embeds, group-scoped announcements, email notifications, RSVPs, front-end bio editor, portal dashboard, invites and offboarding.
 
 == Upgrade Notice ==
+
+= 1.14.0-beta.2 =
+Materials no longer preview inline. Each one is a row with Open and Download, plus checkboxes and a "Download selected (.zip)" button. Downloads are fetched through the site with the Google service-account token, so they no longer depend on each singer's own Drive access. Requires the Ars Nova Google Connector to be active for Drive-hosted materials.
 
 = 1.2.0 =
 Per-material permissions are replaced by unlimited free-form tags plus a singer-side "Filter by tag" control. Nothing is gated at the material level any more — every portal member sees every material in a project they can access. Old permission data is ignored; no migration needed.

@@ -4,7 +4,7 @@ Tags: members, portal, choir, private, materials
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.13.1
+Stable tag: 1.13.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -70,6 +70,10 @@ Deactivation removes nothing. Uninstall also keeps everything by default; define
 Since 1.2.0 there are no per-material grants: any logged-in portal member sees every material in a project they can access. Give the guest a portal account (Roster → Send portal invite) and, if the project is group-tagged, add them to that group (e.g. Special Guests).
 
 == Changelog ==
+
+= 1.13.2 =
+* The public Meet the Singers grid now shows name and voice part only. Pronouns and profession are no longer printed there - they remain on the singer's own profile and on the portal roster, which is where the per-field privacy toggles actually apply.
+* Singers with no headshot sort to the end of the grid instead of scattering through it, alphabetical within each half. Their card carries an ans-singer--no-photo class so the gap can be styled rather than merely tolerated.
 
 = 1.13.1 =
 * POST /portal/groups can now CREATE a group, with an optional parent, so the tree can be built by command rather than by hand. Creating requires an explicit create=true — a typo in a slug should be an error, not a silent new group, because group names are singer-facing tab labels.

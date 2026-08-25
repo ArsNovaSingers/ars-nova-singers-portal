@@ -305,6 +305,25 @@ class ANSP_Singers_Public {
 			}
 		);
 
+		/*
+		 * Singers without a headshot sort to the end, alphabetical within each
+		 * half. A text-only card scattered through a photo grid reads as a hole
+		 * in the layout rather than as someone whose photo has not arrived yet.
+		 * The title comparison is explicit rather than leaning on usort being
+		 * stable, so the order does not depend on the PHP version.
+		 */
+		usort(
+			$singers,
+			function ( $a, $b ) {
+				$a_missing = has_post_thumbnail( $a->ID ) ? 0 : 1;
+				$b_missing = has_post_thumbnail( $b->ID ) ? 0 : 1;
+				if ( $a_missing !== $b_missing ) {
+					return $a_missing <=> $b_missing;
+				}
+				return strcasecmp( get_the_title( $a ), get_the_title( $b ) );
+			}
+		);
+
 		if ( empty( $singers ) ) {
 			return '';
 		}
@@ -315,18 +334,12 @@ class ANSP_Singers_Public {
 		echo '<div class="ans-singers ans-singers--cols-' . esc_attr( (string) $columns ) . '">';
 
 		foreach ( $singers as $singer ) {
-			// Respect the singer's own "Show on the public Singers page"
-			// choice. Absent meta means visible, so existing profiles are
-			// unaffected until someone actively opts out.
-			$pronouns   = ansp_is_field_public( $singer->ID, 'pronouns' )
-				? (string) get_post_meta( $singer->ID, 'pronouns', true )
-				: '';
-			$profession = (string) get_post_meta( $singer->ID, 'profession', true );
 			$parts      = self::parts_string( $singer->ID );
+			$has_photo  = has_post_thumbnail( $singer->ID );
 
-			echo '<div class="ans-singer">';
+			echo '<div class="ans-singer' . ( $has_photo ? '' : ' ans-singer--no-photo' ) . '">';
 
-			if ( has_post_thumbnail( $singer->ID ) ) {
+			if ( $has_photo ) {
 				$ansp_photo_link = ( 'publish' === get_post_status( $singer ) ) ? get_permalink( $singer ) : '';
 				echo '<div class="ans-singer__photo">';
 				if ( $ansp_photo_link ) {
@@ -352,20 +365,10 @@ class ANSP_Singers_Public {
 			} else {
 				echo esc_html( get_the_title( $singer ) );
 			}
-			echo '</strong>';
-			if ( $pronouns ) {
-				echo ' <span class="ans-singer__pronouns">(' . esc_html( $pronouns ) . ')</span>';
-			}
-			echo '</p>';
+			echo '</strong></p>';
 
-			$line = $parts;
-			if ( $parts && $profession ) {
-				$line = $parts . ' & ' . $profession;
-			} elseif ( ! $parts ) {
-				$line = $profession;
-			}
-			if ( $line ) {
-				echo '<p class="ans-singer__detail">' . esc_html( $line ) . '</p>';
+			if ( $parts ) {
+				echo '<p class="ans-singer__detail">' . esc_html( $parts ) . '</p>';
 			}
 
 			echo '</div>';
@@ -504,7 +507,6 @@ class ANSP_Singers_Public {
 			.ans-singer__photo a { display: block; }
 			.ans-singer__photo img { transition: opacity .18s ease; }
 			.ans-singer__photo a:hover img { opacity: .88; }
-			.ans-singer__pronouns { font-weight: 400; font-size: .9em; opacity: .75; }
 			.ans-singer__detail { margin: 0; font-size: .95rem; opacity: .9; }
 		</style>
 		<?php

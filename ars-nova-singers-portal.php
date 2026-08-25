@@ -3,7 +3,7 @@
  * Plugin Name:       Ars Nova Singers Portal
  * Plugin URI:        https://arsnovasingers.org/
  * Description:       Login-gated members portal for the Ars Nova Singers choir: seasons, projects, materials with unlimited free-form tags + a singer-side tag filter, roster, calendars, announcements, RSVPs, front-end singer bios with Gemini "Compose with AI", and the absorbed "singer" directory (CPT, profile details, public bio pages). Groups carry a Google Drive folder mapping — the folder is the access gate for a group's materials. No ACF or other plugin dependencies.
- * Version:           1.13.1
+ * Version:           1.13.2
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Ars Nova Singers
@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
  * Constants
  * -------------------------------------------------------------------------
  */
-define( 'ANSP_VERSION', '1.13.1' );
+define( 'ANSP_VERSION', '1.13.2' );
 define( 'ANSP_FILE', __FILE__ );
 define( 'ANSP_DIR', plugin_dir_path( __FILE__ ) );
 define( 'ANSP_URL', plugin_dir_url( __FILE__ ) );

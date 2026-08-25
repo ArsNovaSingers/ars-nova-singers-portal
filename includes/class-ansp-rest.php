@@ -805,6 +805,29 @@ class ANSP_REST {
 			wp_update_post( array( 'ID' => $id, 'post_status' => $status ) );
 		}
 
+		/*
+		 * photo_id sets the profile's featured image, which is what the public
+		 * Meet the Singers grid renders. 0 clears it.
+		 *
+		 * The id is validated rather than trusted: set_post_thumbnail() will
+		 * happily point a profile at a PDF or at an id that no longer exists,
+		 * and the grid would then render a broken card with nothing to say
+		 * where it came from. Failing here names the problem instead.
+		 */
+		$photo = $req->get_param( 'photo_id' );
+		if ( null !== $photo ) {
+			$photo = (int) $photo;
+			if ( 0 === $photo ) {
+				delete_post_thumbnail( $id );
+			} elseif ( 'attachment' !== get_post_type( $photo ) ) {
+				return new WP_Error( 'ansp_not_attachment', 'photo_id must be a media library attachment id.', array( 'status' => 400 ) );
+			} elseif ( ! wp_attachment_is_image( $photo ) ) {
+				return new WP_Error( 'ansp_not_image', 'photo_id must be an image attachment.', array( 'status' => 400 ) );
+			} else {
+				set_post_thumbnail( $id, $photo );
+			}
+		}
+
 		return $this->get_singers( new WP_REST_Request( 'GET', '' ) );
 	}
 

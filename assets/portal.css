@@ -120,6 +120,11 @@
 	background: transparent;
 	color: var(--ansp-accent) !important;
 }
+.ansp-btn:disabled,
+.ansp-btn[disabled] {
+	opacity: 0.45;
+	cursor: not-allowed;
+}
 
 /* ---------- Login card ---------- */
 .ansp-portal--login { display: flex; justify-content: center; padding: 2rem 1rem; }
@@ -353,7 +358,7 @@
 	display: flex;
 	flex-wrap: wrap;
 	gap: 0.3rem;
-	margin: 0 0 0.5rem;
+	margin: 0.3rem 0 0;
 	padding: 0;
 }
 .ansp-tag-chip {
@@ -364,75 +369,138 @@
 	padding: 0.1rem 0.6rem;
 	font-size: 0.75em;
 }
-.ansp-material.is-filtered-out,
-.ansp-material[hidden] { display: none; }
 
-/* ---------- Materials ---------- */
-.ansp-materials {
-	display: grid;
-	grid-template-columns: 1fr;
-	gap: 1rem;
-	margin-top: 1rem;
-}
-@media (min-width: 860px) {
-	.ansp-materials { grid-template-columns: repeat(2, 1fr); }
-}
-.ansp-material {
+/*
+ * ---------- Materials (v1.14.0: a list, not a gallery) ----------
+ *
+ * The two-column card grid with inline Drive/Docs iframes is gone. Twelve
+ * materials used to be several screens tall and the Open/Download link sat
+ * under a 900px preview nobody read a score in. One row per material puts
+ * the whole project on one screen, which is what a singer came for.
+ */
+.ansp-materials-form { margin: 0; }
+
+.ansp-matbar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem;
+	background: var(--ansp-accent-soft);
 	border: 1px solid var(--ansp-border);
 	border-radius: var(--ansp-radius);
-	padding: 1rem 1.25rem;
+	padding: 0.6rem 0.85rem;
+	margin: 1rem 0 0.35rem;
+	position: sticky;
+	top: 0;
+	z-index: 5;
 }
-.ansp-material-head { margin-bottom: 0.5rem; }
+.ansp-matbar-count {
+	font-size: 0.88em;
+	opacity: 0.8;
+	margin-left: auto;
+}
+
+.ansp-materials--list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	border: 1px solid var(--ansp-border);
+	border-radius: var(--ansp-radius);
+	overflow: hidden;
+}
+.ansp-matrow {
+	display: grid;
+	grid-template-columns: auto 1fr auto;
+	align-items: start;
+	gap: 0.15rem 0.85rem;
+	padding: 0.7rem 0.9rem;
+	border-bottom: 1px solid var(--ansp-border);
+	margin: 0;
+}
+.ansp-matrow:last-child { border-bottom: 0; }
+.ansp-matrow:hover { background: #fbfcfe; }
+.ansp-matrow.is-selected { background: #f2f6fc; }
+.ansp-matrow.is-filtered-out,
+.ansp-matrow[hidden] { display: none; }
+
+.ansp-matrow-check {
+	display: flex;
+	align-items: center;
+	height: 1.9rem;
+}
+.ansp-matrow-check input {
+	width: 1.05rem;
+	height: 1.05rem;
+	margin: 0;
+	cursor: pointer;
+}
+.ansp-matrow-nozip {
+	width: 1.05rem;
+	text-align: center;
+	opacity: 0.35;
+	cursor: help;
+}
+
+.ansp-matrow-main { min-width: 0; }
+.ansp-matrow-titleline {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem;
+}
+.ansp-matrow-title {
+	font-weight: 600;
+	overflow-wrap: anywhere;
+}
+.ansp-matrow-hint {
+	font-size: 0.76em;
+	font-style: italic;
+	opacity: 0.6;
+}
 .ansp-material-type {
 	display: inline-block;
-	font-size: 0.72em;
+	font-size: 0.68em;
 	text-transform: uppercase;
 	letter-spacing: 0.06em;
+	font-weight: 700;
 	background: var(--ansp-accent-soft);
+	color: var(--ansp-accent);
 	border-radius: 999px;
-	padding: 0.1rem 0.6rem;
-	margin-bottom: 0.3rem;
+	padding: 0.12rem 0.55rem;
+	white-space: nowrap;
 }
-.ansp-material-title { margin: 0; font-size: 1.05em; }
-.ansp-material-note { font-size: 0.9em; opacity: 0.8; margin: 0 0 0.5rem; }
-.ansp-embed--drive,
-.ansp-embed--video {
-	position: relative;
-	padding-top: 66%;
-	border-radius: 8px;
-	overflow: hidden;
-	background: #f4f5f7;
-	margin-bottom: 0.6rem;
+.ansp-material-note {
+	font-size: 0.88em;
+	opacity: 0.8;
+	margin: 0.15rem 0 0;
 }
+
+.ansp-matrow-actions {
+	display: flex;
+	gap: 0.4rem;
+	align-items: center;
+	white-space: nowrap;
+}
+
 /*
- * A material with an inline document preview spans the whole materials grid.
- * Half a column is fine for a thumbnail; it is not enough to read a score or
- * a rehearsal doc in — headings wrap three deep and nobody reads it.
+ * A list with no checkbox column (Past Projects) is two columns, not three,
+ * or the title lands in the narrow track meant for the checkbox.
  */
-.ansp-material--wide {
-	grid-column: 1 / -1;
+.ansp-materials--noselect .ansp-matrow { grid-template-columns: 1fr auto; }
+
+@media (max-width: 680px) {
+	.ansp-matrow { grid-template-columns: auto 1fr; }
+	.ansp-materials--noselect .ansp-matrow { grid-template-columns: 1fr; }
+	.ansp-materials--noselect .ansp-matrow-actions { grid-column: 1; }
+	.ansp-matrow-actions {
+		grid-column: 2;
+		margin-top: 0.45rem;
+	}
+	.ansp-matbar-count {
+		margin-left: 0;
+		width: 100%;
+	}
 }
-.ansp-material--wide .ansp-embed--drive {
-	padding-top: 0;
-	height: clamp(460px, 78vh, 940px);
-}
-.ansp-embed--drive iframe,
-.ansp-embed--video iframe,
-.ansp-embed--video video {
-	position: absolute;
-	inset: 0;
-	width: 100%;
-	height: 100%;
-	border: 0;
-}
-.ansp-material-image img {
-	max-width: 100%;
-	height: auto;
-	border-radius: 8px;
-	display: block;
-}
-.ansp-material-audio audio { width: 100%; }
-.ansp-material-actions { margin: 0.4rem 0 0; }
 
 /* ---------- Project meta + RSVP ---------- */
 .ansp-project-meta {

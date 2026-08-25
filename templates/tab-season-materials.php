@@ -5,10 +5,17 @@
  * Shows the current season's brief link, then a "Projects" sub-tab menu:
  * one sub-tab per non-archived project the viewer can see (titles pulled
  * from the ans_project posts). Selecting a project reveals ALL its
- * materials (v1.2.0: materials are no longer gated per-user) rendered by
- * material-item.php with inline previews, plus a "Filter by tag" control
- * built from the union of the project's effective tags. (The RSVP form is
- * built but hidden — see below.)
+ * materials (v1.2.0: materials are no longer gated per-user) as a plain
+ * LIST (v1.14.0 — inline previews removed), plus a "Filter by tag" control
+ * built from the union of the project's effective tags, and a selection
+ * toolbar that packages the chosen materials into one .zip.
+ * (The RSVP form is built but hidden — see below.)
+ *
+ * The list sits inside a form posting to admin-post.php. The toolbar's
+ * Select all / Select none only ever touch rows the tag filter is currently
+ * showing, and assets/portal.js clears the checkbox of any row the filter
+ * hides — a hidden checkbox is still submitted by the browser, so unticking
+ * it is what stops a filtered-out material arriving in the archive anyway.
  *
  * @package ArsNovaSingersPortal
  */
@@ -231,6 +238,17 @@ if ( $ansp_season instanceof WP_Term ) {
 					}
 					natcasesort( $ansp_tag_union );
 					$ansp_tag_union = array_values( $ansp_tag_union );
+
+					// Is anything here actually downloadable? A project of pure
+					// YouTube links should not grow a zip button that can only
+					// ever refuse.
+					$ansp_any_zippable = false;
+					foreach ( $ansp_materials as $ansp_material ) {
+						if ( ! empty( $ansp_material['id'] ) && ! empty( $ansp_material['url'] ) && ANSP_Materials_Zip::is_zippable( $ansp_material['url'] ) ) {
+							$ansp_any_zippable = true;
+							break;
+						}
+					}
 					?>
 					<div class="ansp-materials-wrap" data-ansp-material-filter-scope>
 						<?php if ( ! empty( $ansp_tag_union ) ) : ?>
@@ -254,19 +272,36 @@ if ( $ansp_season instanceof WP_Term ) {
 								</div>
 							</fieldset>
 						<?php endif; ?>
-						<div class="ansp-materials" data-ansp-materials>
-							<?php
-							foreach ( $ansp_materials as $ansp_material ) {
-								ansp_get_template(
-									'material-item',
-									array(
-										'material'   => $ansp_material,
-										'project_id' => $ansp_pid,
-									)
-								);
-							}
-							?>
-						</div>
+
+						<form class="ansp-materials-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+							<input type="hidden" name="action" value="<?php echo esc_attr( ANSP_Materials_Zip::ACTION_ZIP ); ?>" />
+							<input type="hidden" name="project_id" value="<?php echo esc_attr( (string) $ansp_pid ); ?>" />
+							<?php wp_nonce_field( 'ansp_zip_' . $ansp_pid, 'ansp_zip_nonce' ); ?>
+
+							<?php if ( $ansp_any_zippable ) : ?>
+								<div class="ansp-matbar" data-ansp-matbar>
+									<button type="button" class="ansp-btn ansp-btn--small ansp-btn--ghost" data-ansp-select-all><?php esc_html_e( 'Select all', 'ans-singers-portal' ); ?></button>
+									<button type="button" class="ansp-btn ansp-btn--small ansp-btn--ghost" data-ansp-select-none><?php esc_html_e( 'Select none', 'ans-singers-portal' ); ?></button>
+									<button type="submit" class="ansp-btn ansp-btn--small" data-ansp-zip-submit disabled><?php esc_html_e( 'Download selected (.zip)', 'ans-singers-portal' ); ?></button>
+									<span class="ansp-matbar-count" data-ansp-select-count aria-live="polite"></span>
+								</div>
+							<?php endif; ?>
+
+							<ul class="ansp-materials ansp-materials--list" data-ansp-materials>
+								<?php
+								foreach ( $ansp_materials as $ansp_material ) {
+									ansp_get_template(
+										'material-item',
+										array(
+											'material'   => $ansp_material,
+											'project_id' => $ansp_pid,
+										)
+									);
+								}
+								?>
+							</ul>
+						</form>
+
 						<p class="ansp-empty ansp-tagfilter-empty" data-ansp-tagfilter-empty hidden><?php esc_html_e( 'No materials match the selected tags.', 'ans-singers-portal' ); ?></p>
 					</div>
 				<?php endif; ?>

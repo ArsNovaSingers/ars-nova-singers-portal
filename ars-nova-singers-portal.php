@@ -58,6 +58,7 @@ require_once ANSP_DIR . 'includes/class-ansp-dashboard.php';
 require_once ANSP_DIR . 'includes/class-ansp-bio-editor.php';
 require_once ANSP_DIR . 'includes/class-ansp-ai-bio.php';
 require_once ANSP_DIR . 'includes/class-ansp-rest.php';
+require_once ANSP_DIR . 'includes/class-ansp-scores-source.php';
 
 /**
  * Boot the plugin.
@@ -88,6 +89,7 @@ function ansp_init() {
 	new ANSP_CPT();
 	new ANSP_Materials();
 	new ANSP_Materials_Zip(); // Server-side single + bulk .zip download of materials.
+	ANSP_Scores_Source::init();  // Published sheet music from the device-sync mirror, read-only.
 	new ANSP_Project_Meta();
 	new ANSP_Profiles();
 	new ANSP_Login();

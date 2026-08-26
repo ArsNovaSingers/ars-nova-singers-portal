@@ -248,6 +248,27 @@
 					}
 				} );
 
+				// Second pass: a piece whose every material is filtered out must
+				// go too, or the list keeps a heading standing over nothing.
+				Array.prototype.slice.call( list.querySelectorAll( '[data-ansp-piece]' ) ).forEach( function ( piece ) {
+					var rows = Array.prototype.slice.call( piece.querySelectorAll( '.ansp-matrow' ) );
+					var live = rows.some( function ( row ) {
+						return ! row.hasAttribute( 'hidden' );
+					} );
+					// A piece bucket with no rows at all is not something the
+					// template emits, but if one ever appears, leave it visible
+					// rather than silently swallowing it.
+					if ( ! rows.length ) {
+						live = true;
+					}
+					piece.classList.toggle( 'is-filtered-out', ! live );
+					if ( live ) {
+						piece.removeAttribute( 'hidden' );
+					} else {
+						piece.setAttribute( 'hidden', 'hidden' );
+					}
+				} );
+
 				if ( emptyNote ) {
 					if ( anyVisible || 0 === items.length ) {
 						emptyNote.setAttribute( 'hidden', 'hidden' );

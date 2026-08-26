@@ -91,3 +91,7 @@
 .ansp-drive-open{margin:4px 0 0}
 .ansp-drive-link{display:inline-flex;align-items:center;gap:5px;font-size:12px;text-decoration:none}
 .ansp-drive-ico{flex:0 0 auto}
+
+/* The piece field groups a material with the score and tracks for the same
+ * music. It is a label, never a permission - see Piece_Grouping_Spec.md P1. */
+.ansp-piece-input { margin-top: 0.25rem; }

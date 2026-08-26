@@ -4,7 +4,7 @@ Tags: members, portal, choir, private, materials
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.13.4
+Stable tag: 1.14.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -71,7 +71,7 @@ Since 1.2.0 there are no per-material grants: any logged-in portal member sees e
 
 == Changelog ==
 
-= Unreleased =
+= 1.14.0 =
 * **Materials are a list, not a gallery.** Every inline preview is gone — the Google Drive/Docs iframe, the video embed, the audio player and the inline image. A project's materials are now one compact row each: the title leads, and the content type, tags and the Open/Download buttons share the bottom line — buttons left, type and tags right-justified. Twelve materials used to run several screens deep because four of them rendered as 460–940px iframes; they now fit on one screen, which is what a singer opened the page for.
 * **Bulk download.** Tick any number of materials and take them as a single .zip. Select all / Select none respect the tag filter, so narrowing to "Soprano" and hitting Select all gives you the soprano files and nothing else.
 * **Downloads are fetched server-side.** Materials are shared with the site's Google service account, not necessarily with each singer's own Google identity, so a link pointing straight at Drive worked for some people and not others — and failed like a broken link rather than a permissions problem. Single and bulk downloads now stream through the site using the Ars Nova Google Connector's token: what a singer can see in the portal is exactly what they can download.
@@ -155,7 +155,7 @@ Since 1.2.0 there are no per-material grants: any logged-in portal member sees e
 
 == Upgrade Notice ==
 
-= Unreleased =
+= 1.14.0 =
 Materials no longer preview inline. Each one is a row with Open and Download, plus checkboxes and a "Download selected (.zip)" button. Downloads are fetched through the site with the Google service-account token, so they no longer depend on each singer's own Drive access. Requires the Ars Nova Google Connector to be active for Drive-hosted materials. Materials can also be grouped under a piece: set the Piece field on a material and the singer-facing list gains a heading per piece. Nothing changes for a project until someone fills that field in, and the field never affects who can see what. Note for anyone calling the REST materials endpoint with replace=true: echo the piece back with each row, or it is cleared — the same is already true of note, tags and groups.
 
 = 1.2.0 =

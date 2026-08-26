@@ -9,6 +9,12 @@
  *   the sibling [data-ansp-materials] list live. A material shows when it
  *   has NO tags (general) or at least ONE of its tags is selected (OR
  *   semantics). Selection lives only in the DOM — nothing is persisted.
+ * - Material selection + bulk zip (v1.14.0): [data-ansp-matbar] drives the
+ *   [data-ansp-select] checkboxes inside the same filter scope. Select all
+ *   only ever touches rows the tag filter is currently showing, and hiding
+ *   a row CLEARS its checkbox — the `hidden` attribute does not stop a
+ *   browser submitting a checked box, so unticking it is what keeps a
+ *   filtered-out material out of the archive.
  *
  * No dependencies.
  */
@@ -148,17 +154,61 @@
 			} );
 		}
 
-		// ---- Material tag filter (v1.2.0) --------------------------------
+		// ---- Material tag filter + selection ------------------------------
 		var filterScopes = Array.prototype.slice.call( root.querySelectorAll( '[data-ansp-material-filter-scope]' ) );
 		filterScopes.forEach( function ( scope ) {
-			var filter = scope.querySelector( '[data-ansp-tagfilter]' );
 			var list = scope.querySelector( '[data-ansp-materials]' );
-			if ( ! filter || ! list ) {
-				return; // Project without tags: no filter rendered, show all.
+			if ( ! list ) {
+				return;
 			}
 
-			var checkboxes = Array.prototype.slice.call( filter.querySelectorAll( '[data-ansp-tagfilter-tag]' ) );
+			var filter = scope.querySelector( '[data-ansp-tagfilter]' );
+			var bar = scope.querySelector( '[data-ansp-matbar]' );
 			var emptyNote = scope.querySelector( '[data-ansp-tagfilter-empty]' );
+			var checkboxes = filter
+				? Array.prototype.slice.call( filter.querySelectorAll( '[data-ansp-tagfilter-tag]' ) )
+				: [];
+
+			var countEl = bar ? bar.querySelector( '[data-ansp-select-count]' ) : null;
+			var zipBtn = bar ? bar.querySelector( '[data-ansp-zip-submit]' ) : null;
+			var allBtn = bar ? bar.querySelector( '[data-ansp-select-all]' ) : null;
+			var noneBtn = bar ? bar.querySelector( '[data-ansp-select-none]' ) : null;
+
+			/**
+			 * Every selectable checkbox whose row is currently visible.
+			 */
+			function selectableBoxes() {
+				return Array.prototype.slice.call( list.querySelectorAll( '[data-ansp-select]' ) )
+					.filter( function ( box ) {
+						var row = box.closest ? box.closest( '.ansp-matrow' ) : null;
+						return ! row || ! row.hasAttribute( 'hidden' );
+					} );
+			}
+
+			function updateSelection() {
+				var boxes = selectableBoxes();
+				var chosen = boxes.filter( function ( box ) {
+					return box.checked;
+				} );
+
+				Array.prototype.slice.call( list.querySelectorAll( '.ansp-matrow' ) ).forEach( function ( row ) {
+					var box = row.querySelector( '[data-ansp-select]' );
+					row.classList.toggle( 'is-selected', !! ( box && box.checked ) );
+				} );
+
+				if ( zipBtn ) {
+					zipBtn.disabled = 0 === chosen.length;
+				}
+				if ( countEl ) {
+					if ( chosen.length ) {
+						countEl.textContent = chosen.length + ' of ' + boxes.length + ' selected';
+					} else if ( boxes.length ) {
+						countEl.textContent = 'Nothing selected — ' + boxes.length + ' available';
+					} else {
+						countEl.textContent = '';
+					}
+				}
+			}
 
 			function applyFilter() {
 				var selected = {};
@@ -184,9 +234,17 @@
 					item.classList.toggle( 'is-filtered-out', ! show );
 					if ( show ) {
 						item.removeAttribute( 'hidden' );
-						anyVisible = true;
 					} else {
 						item.setAttribute( 'hidden', 'hidden' );
+						// A hidden checkbox is still submitted. Clear it, or
+						// filtering the list would not filter the download.
+						var box = item.querySelector( '[data-ansp-select]' );
+						if ( box ) {
+							box.checked = false;
+						}
+					}
+					if ( show ) {
+						anyVisible = true;
 					}
 				} );
 
@@ -197,6 +255,8 @@
 						emptyNote.removeAttribute( 'hidden' );
 					}
 				}
+
+				updateSelection();
 			}
 
 			function setAll( state ) {
@@ -210,19 +270,62 @@
 				box.addEventListener( 'change', applyFilter );
 			} );
 
-			var allBtn = filter.querySelector( '[data-ansp-tagfilter-all]' );
-			var noneBtn = filter.querySelector( '[data-ansp-tagfilter-none]' );
+			if ( filter ) {
+				var tagAll = filter.querySelector( '[data-ansp-tagfilter-all]' );
+				var tagNone = filter.querySelector( '[data-ansp-tagfilter-none]' );
+				if ( tagAll ) {
+					tagAll.addEventListener( 'click', function () {
+						setAll( true );
+					} );
+				}
+				if ( tagNone ) {
+					tagNone.addEventListener( 'click', function () {
+						setAll( false );
+					} );
+				}
+			}
+
+			list.addEventListener( 'change', function ( e ) {
+				if ( e.target && e.target.hasAttribute && e.target.hasAttribute( 'data-ansp-select' ) ) {
+					updateSelection();
+				}
+			} );
+
 			if ( allBtn ) {
 				allBtn.addEventListener( 'click', function () {
-					setAll( true );
+					selectableBoxes().forEach( function ( box ) {
+						box.checked = true;
+					} );
+					updateSelection();
 				} );
 			}
 			if ( noneBtn ) {
 				noneBtn.addEventListener( 'click', function () {
-					setAll( false );
+					selectableBoxes().forEach( function ( box ) {
+						box.checked = false;
+					} );
+					updateSelection();
 				} );
 			}
+
+			// Building a zip is not instant. Say so, or the singer clicks it
+			// four more times and we fetch everything four more times.
+			var form = scope.querySelector( '.ansp-materials-form' );
+			if ( form && zipBtn ) {
+				form.addEventListener( 'submit', function () {
+					zipBtn.disabled = true;
+					zipBtn.textContent = 'Preparing your download…';
+					// The response is a file, so this page never navigates and
+					// nothing would re-enable the button. Do it on a timer.
+					window.setTimeout( function () {
+						zipBtn.textContent = 'Download selected (.zip)';
+						updateSelection();
+					}, 8000 );
+				} );
+			}
+
 			// Default: everything checked server-side → everything visible.
+			updateSelection();
 		} );
 
 		// ---- Project sub-tabs (delegated: one handler per container) -----

@@ -1,16 +1,32 @@
 <?php
 /**
- * Renders ONE material with an inline preview, prioritising ease of viewing:
+ * Renders ONE material as a LIST ROW.
  *
- * - Google Drive file links → Drive preview iframe
- *   (https://drive.google.com/file/d/FILEID/preview, ID parsed from the link)
- * - Google Docs/Sheets/Slides → /preview iframe
- * - Video links → oEmbed (YouTube/Vimeo/…) or a direct <video> for files
- * - Images → inline <img>
- * - Direct audio files → <audio controls>
- * - Everything else → a styled open/download button
+ * v1.14.0 removed every inline preview from this template — the Drive/Docs
+ * iframe, the oEmbed video block, <video>, <audio> and <img>. Singers open
+ * their music in Drive or download it; they do not read a score through a
+ * 900px iframe stacked twelve deep, and the previews pushed the actual links
+ * off the bottom of the screen. What replaces them is one dense row per
+ * material: select, identify, open, download.
  *
- * Expects (via ansp_get_template args): $material (array), $project_id (int).
+ * Layout: the TITLE leads the row. Everything that classifies the material —
+ * the content-type label and its tags — is demoted to the bottom line and
+ * right-justified against the Open/Download buttons, so a singer scanning the
+ * list reads down a clean column of piece names instead of a column of the
+ * word "Sheet music" twelve times.
+ *
+ * The row keeps `data-ansp-tags` in exactly the shape assets/portal.js has
+ * always matched on, so the tag filter carries over untouched. Note that the
+ * data attribute carries the EFFECTIVE tags (manual + the auto content-type
+ * label) because that is what the filter offers, while the visible chips show
+ * the type label once, on its own, plus the manual tags — otherwise the type
+ * would appear twice on every row.
+ *
+ * Expects (via ansp_get_template args): $material (array), $project_id (int)
+ * and optionally $selectable (bool, default true). Past Projects passes
+ * false: a checkbox outside the download form would be inert, and archived
+ * material is the material that is supposed to come DOWN for copyright
+ * reasons, so bulk-collecting it is deliberately not made easy.
  *
  * @package ArsNovaSingersPortal
  */
@@ -21,6 +37,10 @@ if ( ! isset( $material ) || ! is_array( $material ) ) {
 	return;
 }
 
+$ansp_project_id = isset( $project_id ) ? (int) $project_id : 0;
+$ansp_selectable = isset( $selectable ) ? (bool) $selectable : true;
+
+$ansp_id    = isset( $material['id'] ) ? (string) $material['id'] : '';
 $ansp_type  = isset( $material['type'] ) ? (string) $material['type'] : 'drive_link';
 $ansp_title = isset( $material['title'] ) ? (string) $material['title'] : '';
 $ansp_url   = isset( $material['url'] ) ? (string) $material['url'] : '';
@@ -29,95 +49,85 @@ $ansp_note  = isset( $material['note'] ) ? (string) $material['note'] : '';
 $ansp_types      = ANSP_Materials::types();
 $ansp_type_label = isset( $ansp_types[ $ansp_type ] ) ? $ansp_types[ $ansp_type ] : $ansp_type;
 
-// Effective tags (manual tags + auto content-type label) drive the chips and
-// the front-end tag filter (portal.js matches on the lowercased data attr).
+// Effective tags drive the front-end filter (portal.js matches on the
+// lowercased data attr); the manual tags alone drive the visible chips.
 $ansp_tags     = ANSP_Materials::effective_tags( $material );
 $ansp_tags_key = implode( '|', array_map( 'strtolower', $ansp_tags ) );
+$ansp_chips    = ANSP_Materials::get_tags( $material );
 
-$ansp_preview_url = ANSP_Materials::preview_url( $ansp_url );
-$ansp_path        = strtolower( (string) wp_parse_url( $ansp_url, PHP_URL_PATH ) );
-$ansp_is_image    = ( 'image' === $ansp_type ) && preg_match( '/\.(jpe?g|png|gif|webp|svg)$/', $ansp_path );
-$ansp_is_audio    = preg_match( '/\.(mp3|m4a|ogg|wav)$/', $ansp_path );
-$ansp_is_videofile = preg_match( '/\.(mp4|webm|mov)$/', $ansp_path );
+/*
+ * Only offer a checkbox for something that can actually be put in a zip.
+ * ANSP_Materials_Zip::is_zippable() is the single answer to that question and
+ * the download handler asks it again server-side — a checkbox that silently
+ * produced nothing would be worse than no checkbox at all.
+ */
+$ansp_zippable = ( '' !== $ansp_url && '' !== $ansp_id && ANSP_Materials_Zip::is_zippable( $ansp_url ) );
+$ansp_checkbox = ( $ansp_selectable && $ansp_zippable );
 
-// Tags allowed when printing oEmbed markup (iframes are not in the default
-// wp_kses_post list, so we extend it deliberately for trusted oEmbed HTML).
-$ansp_embed_kses = array(
-	'iframe' => array(
-		'src'             => true,
-		'title'           => true,
-		'width'           => true,
-		'height'          => true,
-		'frameborder'     => true,
-		'allow'           => true,
-		'allowfullscreen' => true,
-		'loading'         => true,
-		'referrerpolicy'  => true,
-	),
-);
-
-// A Drive/Docs preview is a reading surface, not a thumbnail — it gets the
-// full width of the materials grid instead of one column of two.
-$ansp_wide_class = $ansp_preview_url ? ' ansp-material--wide' : '';
+// A Google-native doc has no raw bytes and is exported instead. Say so on the
+// row rather than letting a PDF appear in the archive unexplained.
+$ansp_is_gdoc = ( 1 === preg_match( '#^https?://docs\.google\.com/(?:document|spreadsheets|presentation|drawings)/d/#', $ansp_url ) );
 ?>
-<article class="ansp-material ansp-material--<?php echo esc_attr( $ansp_type ); ?><?php echo esc_attr( $ansp_wide_class ); ?>" data-ansp-tags="<?php echo esc_attr( $ansp_tags_key ); ?>">
-	<header class="ansp-material-head">
-		<span class="ansp-material-type"><?php echo esc_html( $ansp_type_label ); ?></span>
-		<h5 class="ansp-material-title"><?php echo esc_html( $ansp_title ); ?></h5>
-	</header>
+<li class="ansp-matrow<?php echo $ansp_checkbox ? '' : ' ansp-matrow--nozip'; ?>" data-ansp-tags="<?php echo esc_attr( $ansp_tags_key ); ?>">
 
-	<?php if ( ! empty( $ansp_tags ) ) : ?>
-		<ul class="ansp-material-tags" aria-label="<?php esc_attr_e( 'Tags', 'ans-singers-portal' ); ?>">
-			<?php foreach ( $ansp_tags as $ansp_tag ) : ?>
-				<li class="ansp-tag-chip"><?php echo esc_html( $ansp_tag ); ?></li>
-			<?php endforeach; ?>
-		</ul>
+	<?php if ( $ansp_selectable ) : ?>
+	<div class="ansp-matrow-check">
+		<?php if ( $ansp_checkbox ) : ?>
+			<input
+				type="checkbox"
+				name="material_ids[]"
+				value="<?php echo esc_attr( $ansp_id ); ?>"
+				data-ansp-select
+				aria-label="<?php
+					/* translators: %s: material title. */
+					echo esc_attr( sprintf( __( 'Select %s for download', 'ans-singers-portal' ), $ansp_title ) );
+				?>"
+			/>
+		<?php else : ?>
+			<span class="ansp-matrow-nozip" aria-hidden="true" title="<?php esc_attr_e( 'This is a link, not a file — it cannot be added to a zip.', 'ans-singers-portal' ); ?>">&ndash;</span>
+		<?php endif; ?>
+	</div>
 	<?php endif; ?>
+
+	<span class="ansp-matrow-title">
+		<?php echo esc_html( $ansp_title ); ?>
+		<?php if ( $ansp_is_gdoc ) : ?>
+			<span class="ansp-matrow-hint"><?php esc_html_e( 'Google Doc — downloads as PDF', 'ans-singers-portal' ); ?></span>
+		<?php endif; ?>
+	</span>
 
 	<?php if ( $ansp_note ) : ?>
 		<p class="ansp-material-note"><?php echo esc_html( $ansp_note ); ?></p>
 	<?php endif; ?>
 
-	<?php if ( '' === $ansp_url ) : ?>
-		<p class="ansp-empty"><?php esc_html_e( 'No link provided for this material yet.', 'ans-singers-portal' ); ?></p>
-	<?php elseif ( $ansp_preview_url ) : ?>
-		<div class="ansp-embed ansp-embed--drive">
-			<iframe
-				src="<?php echo esc_url( $ansp_preview_url ); ?>"
-				title="<?php echo esc_attr( $ansp_title ); ?>"
-				loading="lazy"
-				allow="autoplay"
-				allowfullscreen
-			></iframe>
-		</div>
-	<?php elseif ( 'video_link' === $ansp_type && ! $ansp_is_videofile ) : ?>
-		<?php $ansp_oembed = wp_oembed_get( $ansp_url, array( 'width' => 800 ) ); ?>
-		<?php if ( $ansp_oembed ) : ?>
-			<div class="ansp-embed ansp-embed--video">
-				<?php echo wp_kses( $ansp_oembed, $ansp_embed_kses ); ?>
-			</div>
+	<div class="ansp-matrow-foot">
+		<?php if ( '' === $ansp_url ) : ?>
+			<span class="ansp-matrow-hint"><?php esc_html_e( 'No link yet', 'ans-singers-portal' ); ?></span>
+		<?php else : ?>
+			<a class="ansp-btn ansp-btn--small ansp-btn--ghost" href="<?php echo esc_url( $ansp_url ); ?>" target="_blank" rel="noopener noreferrer">
+				<?php esc_html_e( 'Open', 'ans-singers-portal' ); ?>
+			</a>
+			<?php if ( $ansp_zippable ) : ?>
+				<?php
+				/*
+				 * Downloads route through this site, not straight at Drive.
+				 * The files are shared with the service account rather than
+				 * with each singer's own Google identity, so a direct Drive
+				 * download link works for some people and not others.
+				 */
+				?>
+				<a class="ansp-btn ansp-btn--small" href="<?php echo esc_url( ANSP_Materials_Zip::single_url( $ansp_project_id, $ansp_id ) ); ?>">
+					<?php esc_html_e( 'Download', 'ans-singers-portal' ); ?>
+				</a>
+			<?php endif; ?>
 		<?php endif; ?>
-	<?php elseif ( $ansp_is_videofile ) : ?>
-		<div class="ansp-embed ansp-embed--video">
-			<video controls preload="metadata" src="<?php echo esc_url( $ansp_url ); ?>"></video>
-		</div>
-	<?php elseif ( $ansp_is_image ) : ?>
-		<figure class="ansp-material-image">
-			<a href="<?php echo esc_url( $ansp_url ); ?>" target="_blank" rel="noopener noreferrer">
-				<img src="<?php echo esc_url( $ansp_url ); ?>" alt="<?php echo esc_attr( $ansp_title ); ?>" loading="lazy" />
-			</a>
-		</figure>
-	<?php elseif ( $ansp_is_audio ) : ?>
-		<div class="ansp-material-audio">
-			<audio controls preload="none" src="<?php echo esc_url( $ansp_url ); ?>"></audio>
-		</div>
-	<?php endif; ?>
 
-	<?php if ( '' !== $ansp_url ) : ?>
-		<p class="ansp-material-actions">
-			<a class="ansp-btn ansp-btn--small" href="<?php echo esc_url( $ansp_url ); ?>" target="_blank" rel="noopener noreferrer">
-				<?php esc_html_e( 'Open / Download', 'ans-singers-portal' ); ?>
-			</a>
-		</p>
-	<?php endif; ?>
-</article>
+		<ul class="ansp-matrow-chips" aria-label="<?php esc_attr_e( 'Type and tags', 'ans-singers-portal' ); ?>">
+			<li class="ansp-tag-chip ansp-tag-chip--type"><?php echo esc_html( $ansp_type_label ); ?></li>
+			<?php foreach ( $ansp_chips as $ansp_tag ) : ?>
+				<li class="ansp-tag-chip"><?php echo esc_html( $ansp_tag ); ?></li>
+			<?php endforeach; ?>
+		</ul>
+	</div>
+
+</li>

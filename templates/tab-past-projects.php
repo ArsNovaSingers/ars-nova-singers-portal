@@ -67,7 +67,7 @@ foreach ( $ansp_query->posts as $ansp_maybe ) {
 				<?php if ( empty( $ansp_materials ) ) : ?>
 					<p class="ansp-empty"><?php esc_html_e( 'No materials for this project.', 'ans-singers-portal' ); ?></p>
 				<?php else : ?>
-					<div class="ansp-materials">
+					<ul class="ansp-materials ansp-materials--list ansp-materials--noselect">
 						<?php
 						foreach ( $ansp_materials as $ansp_material ) {
 							ansp_get_template(
@@ -75,11 +75,13 @@ foreach ( $ansp_query->posts as $ansp_maybe ) {
 								array(
 									'material'   => $ansp_material,
 									'project_id' => $ansp_pid,
+									// Read-only archive: no checkbox, no bulk zip.
+									'selectable' => false,
 								)
 							);
 						}
 						?>
-					</div>
+					</ul>
 				<?php endif; ?>
 			</details>
 		<?php endforeach; ?>

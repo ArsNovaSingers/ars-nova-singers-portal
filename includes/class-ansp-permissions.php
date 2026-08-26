@@ -395,7 +395,7 @@ class ANSP_Permissions {
 		}
 		$all = ANSP_Materials::get_materials( (int) $project_id );
 		if ( $is_manager ) {
-			return $all;
+			return apply_filters( 'ansp_visible_materials', $all, (int) $project_id, $user_id );
 		}
 		$user_groups = self::get_user_effective_group_slugs( $user_id );
 		$visible     = array();
@@ -405,7 +405,23 @@ class ANSP_Permissions {
 				$visible[] = $row;
 			}
 		}
-		return $visible;
+
+		/**
+		 * The visible materials for one project, after group gating.
+		 *
+		 * Exists so published sheet music from the device-sync mirror can be shown
+		 * alongside hand-entered materials without a second copy being written into
+		 * post meta. See ANSP_Scores_Source.
+		 *
+		 * Anything hooked here has already had the permission decision made for it
+		 * by the code above; a filter MUST NOT be used to widen access. It is for
+		 * adding rows the caller is already entitled to see.
+		 *
+		 * @param array[] $visible    Rows this user may see.
+		 * @param int     $project_id Project post ID.
+		 * @param int     $user_id    Viewer.
+		 */
+		return apply_filters( 'ansp_visible_materials', $visible, (int) $project_id, $user_id );
 	}
 }
 

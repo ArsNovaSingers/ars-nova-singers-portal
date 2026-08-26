@@ -4,7 +4,7 @@ Tags: members, portal, choir, private, materials
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.13.3
+Stable tag: 1.13.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -70,6 +70,10 @@ Deactivation removes nothing. Uninstall also keeps everything by default; define
 Since 1.2.0 there are no per-material grants: any logged-in portal member sees every material in a project they can access. Give the guest a portal account (Roster → Send portal invite) and, if the project is group-tagged, add them to that group (e.g. Special Guests).
 
 == Changelog ==
+
+= 1.13.4 =
+* The singers REST read now returns the profile photo itself — id, url, filename and pixel dimensions — not just a yes/no. 1.13.3 made the photo writable but left the read unable to say whether the photo was any good, and a roster audit on 2026-08-25 turned up six profiles restored from a 2021 shoot at 260x260 — below every crop the site generates, and visibly soft on the public grid. Answering "who is below our standard?" took three extra API calls per singer; it is now one call for the whole roster, which is the question asked after every photoshoot.
+* That read also accepts `id` to narrow to a single profile, so setting one singer's photo no longer echoes the entire roster back.
 
 = 1.13.3 =
 * POST /portal/singers accepts photo_id, so a singer profile's featured image - the photo the public Meet the Singers grid renders - can be set by command. 0 clears it. The id must be a real image attachment; pointing a profile at a PDF or a dead id is an error rather than a silently broken card.

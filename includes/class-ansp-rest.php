@@ -738,7 +738,24 @@ class ANSP_REST {
 	 * ---------------------------------------------------------------- */
 
 	/**
-	 * List singer profiles with their groups and linked user.
+	 * List singer profiles with their groups and their photo.
+	 *
+	 * WHY `photo` IS AN OBJECT AND NOT JUST A BOOLEAN
+	 * -----------------------------------------------
+	 * 1.13.3 made the photo writable but left the read as `has_photo` alone,
+	 * which answers "is there one?" and nothing else. The question that
+	 * actually comes up is "is it any GOOD?" - on 2026-08-25 an audit of the
+	 * roster found six profiles restored from a 2021 shoot at 260x260, which
+	 * is below every crop the site generates and renders visibly soft. Telling
+	 * those apart from a current 1600px headshot took three extra round-trips
+	 * per singer through wp/v2, because the id was not in this payload.
+	 *
+	 * So `photo` carries id, url, filename and pixel dimensions. "Who is below
+	 * our standard?" is now one call, which is the question asked after every
+	 * photoshoot.
+	 *
+	 * `id` narrows to a single profile - the same shape get_projects() uses.
+	 * Without it, save_singer() had to echo every profile to report on one.
 	 *
 	 * @param WP_REST_Request $req Request.
 	 * @return array
@@ -748,17 +765,24 @@ class ANSP_REST {
 			return array( 'count' => 0, 'items' => array(), 'note' => 'The singer post type is not registered.' );
 		}
 
-		$search = (string) $req->get_param( 'search' );
-		$posts  = get_posts(
-			array(
-				'post_type'      => 'singer',
-				'post_status'    => 'any',
-				'posts_per_page' => -1,
-				'orderby'        => 'title',
-				'order'          => 'ASC',
-				's'              => $search,
-			)
-		);
+		$one = (int) $req->get_param( 'id' );
+
+		if ( $one ) {
+			$post  = get_post( $one );
+			$posts = ( $post instanceof WP_Post && 'singer' === $post->post_type ) ? array( $post ) : array();
+		} else {
+			$search = (string) $req->get_param( 'search' );
+			$posts  = get_posts(
+				array(
+					'post_type'      => 'singer',
+					'post_status'    => 'any',
+					'posts_per_page' => -1,
+					'orderby'        => 'title',
+					'order'          => 'ASC',
+					's'              => $search,
+				)
+			);
+		}
 
 		$items = array();
 		foreach ( $posts as $p ) {
@@ -771,10 +795,40 @@ class ANSP_REST {
 				'groups'      => wp_get_object_terms( $p->ID, 'ans_group', array( 'fields' => 'slugs' ) ),
 				'group_names' => wp_get_object_terms( $p->ID, 'ans_group', array( 'fields' => 'names' ) ),
 				'has_photo'   => (bool) get_post_thumbnail_id( $p->ID ),
+				'photo'       => self::photo_payload( (int) $p->ID ),
 			);
 		}
 
 		return array( 'count' => count( $items ), 'items' => $items );
+	}
+
+	/**
+	 * The profile photo, or null.
+	 *
+	 * Dimensions come from the stored attachment metadata rather than the file
+	 * itself, so this stays cheap enough to run for the whole roster in one
+	 * request. A thumbnail id pointing at an attachment that no longer exists
+	 * returns null rather than a half-filled object - a deleted file should
+	 * read as "no photo", because that is what it is on the page.
+	 *
+	 * @param int $singer_id Singer post id.
+	 * @return array|null
+	 */
+	protected static function photo_payload( $singer_id ) {
+		$thumb_id = (int) get_post_thumbnail_id( $singer_id );
+		if ( ! $thumb_id || 'attachment' !== get_post_type( $thumb_id ) ) {
+			return null;
+		}
+
+		$meta = wp_get_attachment_metadata( $thumb_id );
+
+		return array(
+			'id'     => $thumb_id,
+			'url'    => wp_get_attachment_image_url( $thumb_id, 'full' ),
+			'file'   => basename( (string) get_attached_file( $thumb_id ) ),
+			'width'  => isset( $meta['width'] ) ? (int) $meta['width'] : 0,
+			'height' => isset( $meta['height'] ) ? (int) $meta['height'] : 0,
+		);
 	}
 
 	/**
@@ -828,7 +882,12 @@ class ANSP_REST {
 			}
 		}
 
-		return $this->get_singers( new WP_REST_Request( 'GET', '' ) );
+		// Echo back only the profile that changed. Attributes are the third
+		// constructor argument, not params, so the id must be set explicitly.
+		$echo = new WP_REST_Request( 'GET', '' );
+		$echo->set_param( 'id', $id );
+
+		return $this->get_singers( $echo );
 	}
 
 	/* -------------------------------------------------------------------

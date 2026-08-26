@@ -213,6 +213,109 @@ class ANSP_Materials {
 	}
 
 	/**
+	 * The piece a material belongs to, or '' when it is unfiled.
+	 *
+	 * A piece is a free-text LABEL, deliberately not a pointer at another
+	 * material row. Row ids are uniqid()-based, project-scoped and have no
+	 * referential integrity, so a parent_id scheme would silently orphan
+	 * children when a parent row is deleted. A label also lets a piece exist
+	 * with rehearsal tracks and no score yet, or with two scores, and lets the
+	 * scores worker propose a piece without ever knowing a WordPress row id.
+	 * See Piece_Grouping_Spec.md section 3.
+	 *
+	 * @param array $row Material row.
+	 * @return string
+	 */
+	public static function get_piece( $row ) {
+		if ( ! is_array( $row ) || ! isset( $row['piece'] ) ) {
+			return '';
+		}
+		return trim( (string) $row['piece'] );
+	}
+
+	/**
+	 * Bucket material rows under their piece, for display.
+	 *
+	 * Pieces come out in the order they first appear in the materials array,
+	 * so Tom's ordering is preserved rather than alphabetised behind his back.
+	 * Unfiled rows collect in one trailing bucket with an empty label - they
+	 * are never hidden for lacking a piece (invariant P3).
+	 *
+	 * @param array[] $rows Material rows.
+	 * @return array[] List of array( 'piece' => string, 'rows' => array[] ).
+	 */
+	public static function group_by_piece( $rows ) {
+		if ( ! is_array( $rows ) ) {
+			return array();
+		}
+
+		$buckets = array();
+		$order   = array();
+		$unfiled = array();
+
+		foreach ( $rows as $row ) {
+			if ( ! is_array( $row ) ) {
+				continue;
+			}
+			$piece = self::get_piece( $row );
+			if ( '' === $piece ) {
+				$unfiled[] = $row;
+				continue;
+			}
+			$key = strtolower( $piece );
+			if ( ! isset( $buckets[ $key ] ) ) {
+				// First spelling of a piece wins, matching how tags dedupe.
+				$buckets[ $key ] = array(
+					'piece' => $piece,
+					'rows'  => array(),
+				);
+				$order[]         = $key;
+			}
+			$buckets[ $key ]['rows'][] = $row;
+		}
+
+		$out = array();
+		foreach ( $order as $key ) {
+			$out[] = $buckets[ $key ];
+		}
+		if ( $unfiled ) {
+			$out[] = array(
+				'piece' => '',
+				'rows'  => $unfiled,
+			);
+		}
+		return $out;
+	}
+
+	/**
+	 * Piece labels already used on a project, for the admin datalist.
+	 *
+	 * Offering what is already there is what keeps a project's labels
+	 * self-consistent without imposing a naming scheme on anyone.
+	 *
+	 * @param int $post_id Project post ID.
+	 * @return string[]
+	 */
+	public static function pieces_in_use( $post_id ) {
+		$out  = array();
+		$seen = array();
+		foreach ( self::get_materials( $post_id ) as $row ) {
+			$piece = self::get_piece( $row );
+			if ( '' === $piece ) {
+				continue;
+			}
+			$key = strtolower( $piece );
+			if ( isset( $seen[ $key ] ) ) {
+				continue;
+			}
+			$seen[ $key ] = true;
+			$out[]        = $piece;
+		}
+		natcasesort( $out );
+		return array_values( $out );
+	}
+
+	/**
 	 * Read the sanitised materials array off a project.
 	 *
 	 * @param int $post_id Project post ID.
@@ -293,13 +396,13 @@ class ANSP_Materials {
 		$materials = self::get_materials( $post->ID );
 		?>
 		<p class="description">
-			<?php esc_html_e( 'Paste a Google Drive share link, a video URL (YouTube/Vimeo) or a direct file URL for each material — files stay in Drive; the portal previews them inline. Check the Groups a material is for to control who sees it (leave all unchecked = everyone sees it). Use TAGS to help singers filter (voice parts, "Video", "Rehearsal Note", deadlines — anything, unlimited). Type a tag and press Enter or comma to add it; click × on a chip to remove it. Pick from the suggestions or type your own.', 'ans-singers-portal' ); ?>
+			<?php esc_html_e( 'Paste a Google Drive share link, a video URL (YouTube/Vimeo) or a direct file URL for each material — files stay in Drive; the portal previews them inline. Check the Groups a material is for to control who sees it (leave all unchecked = everyone sees it). Use TAGS to help singers filter (voice parts, "Video", "Rehearsal Note", deadlines — anything, unlimited). Type a tag and press Enter or comma to add it; click × on a chip to remove it. Pick from the suggestions or type your own. Give a material a PIECE to group it with the score and rehearsal tracks for the same music — singers then see one heading per piece instead of a flat list. A piece is a label, not a permission: leaving it blank simply files the material under "Other materials".', 'ans-singers-portal' ); ?>
 		</p>
 		<table class="widefat ansp-materials-table" id="ansp-materials-table">
 			<thead>
 				<tr>
 					<th class="ansp-col-type"><?php esc_html_e( 'Type', 'ans-singers-portal' ); ?></th>
-					<th class="ansp-col-main"><?php esc_html_e( 'Title / URL / Note', 'ans-singers-portal' ); ?></th>
+					<th class="ansp-col-main"><?php esc_html_e( 'Title / URL / Note / Piece', 'ans-singers-portal' ); ?></th>
 					<th class="ansp-col-groups"><?php esc_html_e( 'Groups (who sees it)', 'ans-singers-portal' ); ?></th>
 					<th class="ansp-col-tags"><?php esc_html_e( 'Tags (filter)', 'ans-singers-portal' ); ?></th>
 					<th class="ansp-col-actions"><span class="screen-reader-text"><?php esc_html_e( 'Actions', 'ans-singers-portal' ); ?></span></th>
@@ -320,6 +423,11 @@ class ANSP_Materials {
 				<?php esc_html_e( '+ Add material', 'ans-singers-portal' ); ?>
 			</button>
 		</p>
+		<datalist id="ansp-piece-suggestions">
+			<?php foreach ( self::pieces_in_use( $post->ID ) as $ansp_piece_option ) : ?>
+				<option value="<?php echo esc_attr( $ansp_piece_option ); ?>"></option>
+			<?php endforeach; ?>
+		</datalist>
 		<datalist id="ansp-tag-suggestions">
 			<?php foreach ( self::suggested_tags() as $suggestion ) : ?>
 				<option value="<?php echo esc_attr( $suggestion ); ?>"></option>
@@ -347,6 +455,7 @@ class ANSP_Materials {
 		$title = isset( $row['title'] ) ? (string) $row['title'] : '';
 		$url   = isset( $row['url'] ) ? (string) $row['url'] : '';
 		$note  = isset( $row['note'] ) ? (string) $row['note'] : '';
+		$piece = self::get_piece( $row );
 		$tags        = self::get_tags( $row );
 		$groups      = self::get_groups( $row );
 		$group_terms = self::group_terms();
@@ -365,6 +474,16 @@ class ANSP_Materials {
 				<input type="text" class="widefat" name="<?php echo esc_attr( $name ); ?>[title]" value="<?php echo esc_attr( $title ); ?>" placeholder="<?php esc_attr_e( 'Title (e.g. "Lux Aeterna — Soprano part")', 'ans-singers-portal' ); ?>" />
 				<input type="url" class="widefat" name="<?php echo esc_attr( $name ); ?>[url]" value="<?php echo esc_url( $url ); ?>" placeholder="<?php esc_attr_e( 'https://drive.google.com/… or video / file URL', 'ans-singers-portal' ); ?>" />
 				<input type="text" class="widefat" name="<?php echo esc_attr( $name ); ?>[note]" value="<?php echo esc_attr( $note ); ?>" placeholder="<?php esc_attr_e( 'Optional note (e.g. "learn by Oct 3")', 'ans-singers-portal' ); ?>" />
+				<input
+					type="text"
+					class="widefat ansp-piece-input"
+					name="<?php echo esc_attr( $name ); ?>[piece]"
+					value="<?php echo esc_attr( $piece ); ?>"
+					list="ansp-piece-suggestions"
+					autocomplete="off"
+					aria-label="<?php esc_attr_e( 'Piece this material belongs to', 'ans-singers-portal' ); ?>"
+					placeholder="<?php esc_attr_e( 'Piece (optional) — groups this with the score and tracks for the same music', 'ans-singers-portal' ); ?>"
+				/>
 				<p class="ansp-drive-open">
 					<a href="https://drive.google.com/drive/my-drive" target="_blank" rel="noopener noreferrer" class="ansp-drive-link" title="<?php esc_attr_e( 'Open Google Drive in a new tab to copy a file\'s share link', 'ans-singers-portal' ); ?>">
 						<svg class="ansp-drive-ico" viewBox="0 0 87.3 78" width="16" height="16" aria-hidden="true" focusable="false"><path fill="#0066da" d="M6.6 66.85l3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z"/><path fill="#00ac47" d="M43.65 25L29.9 1.2c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44C.4 49.9 0 51.45 0 53h27.5z"/><path fill="#ea4335" d="M73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5H59.8l5.85 11.5z"/><path fill="#00832d" d="M43.65 25L57.4 1.2C56.05.4 54.5 0 52.9 0H34.4c-1.6 0-3.15.45-4.5 1.2z"/><path fill="#2684fc" d="M59.8 53H27.5L13.75 76.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z"/><path fill="#ffba00" d="M73.4 26.5L60.7 4.5c-.8-1.4-1.95-2.5-3.3-3.3L43.65 25 59.8 53h27.45c0-1.55-.4-3.1-1.2-4.5z"/></svg>
@@ -464,6 +583,7 @@ class ANSP_Materials {
 				'title' => $title,
 				'url'   => $url,
 				'note'  => isset( $row['note'] ) ? sanitize_text_field( $row['note'] ) : '',
+				'piece'  => isset( $row['piece'] ) ? trim( sanitize_text_field( $row['piece'] ) ) : '',
 				'tags'   => self::sanitize_tags( isset( $row['tags'] ) ? $row['tags'] : array() ),
 				'groups' => self::get_groups( array( 'groups' => isset( $row['groups'] ) ? $row['groups'] : array() ) ),
 			);

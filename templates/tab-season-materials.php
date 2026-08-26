@@ -287,19 +287,15 @@ if ( $ansp_season instanceof WP_Term ) {
 								</div>
 							<?php endif; ?>
 
-							<ul class="ansp-materials ansp-materials--list" data-ansp-materials>
-								<?php
-								foreach ( $ansp_materials as $ansp_material ) {
-									ansp_get_template(
-										'material-item',
-										array(
-											'material'   => $ansp_material,
-											'project_id' => $ansp_pid,
-										)
-									);
-								}
-								?>
-							</ul>
+							<?php
+							ansp_get_template(
+								'materials-list',
+								array(
+									'materials'  => $ansp_materials,
+									'project_id' => $ansp_pid,
+								)
+							);
+							?>
 						</form>
 
 						<p class="ansp-empty ansp-tagfilter-empty" data-ansp-tagfilter-empty hidden><?php esc_html_e( 'No materials match the selected tags.', 'ans-singers-portal' ); ?></p>

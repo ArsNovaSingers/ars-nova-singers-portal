@@ -585,3 +585,22 @@
 }
 @keyframes ansp-spin { to { transform: rotate(360deg); } }
 .ansp-field--parts .ansp-inline-check { display: inline-block; margin: 0 0.75rem 0.25rem 0; }
+
+/* ---- Pieces -------------------------------------------------------------
+ * A piece is a heading with its materials nested under it. Only rendered when
+ * a project actually uses pieces; otherwise the list stays flat.
+ */
+.ansp-materials--pieced { display: block; }
+.ansp-piece { display: block; margin: 0 0 1.25rem; padding: 0; list-style: none; }
+.ansp-piece:last-child { margin-bottom: 0; }
+.ansp-piece[hidden] { display: none; }
+.ansp-piece-title {
+	margin: 0 0 0.4rem;
+	font-size: 1rem;
+	line-height: 1.3;
+	font-weight: 600;
+	padding-bottom: 0.3rem;
+	border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+}
+.ansp-piece--other .ansp-piece-title { font-weight: 500; opacity: 0.75; }
+.ansp-piece-items { margin: 0; padding: 0; list-style: none; }

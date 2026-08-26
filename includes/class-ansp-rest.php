@@ -629,6 +629,10 @@ class ANSP_REST {
 				'title'  => isset( $row['title'] ) ? sanitize_text_field( (string) $row['title'] ) : '',
 				'url'    => isset( $row['url'] ) ? esc_url_raw( (string) $row['url'] ) : '',
 				'note'   => isset( $row['note'] ) ? sanitize_text_field( (string) $row['note'] ) : '',
+				// Keep in lockstep with ANSP_Materials::save(). Two independent
+				// sanitisers write this array; a field added to only one of them
+				// is silently stripped on the other path.
+				'piece'  => isset( $row['piece'] ) ? trim( sanitize_text_field( (string) $row['piece'] ) ) : '',
 				'tags'   => ANSP_Materials::sanitize_tags( isset( $row['tags'] ) ? $row['tags'] : array() ),
 				'groups' => ANSP_Materials::get_groups( $row ),
 			);

@@ -61,20 +61,47 @@ $ansp_flat = ( 1 === count( $ansp_buckets ) && '' === $ansp_buckets[0]['piece'] 
 			?>
 			<li class="ansp-piece<?php echo $ansp_is_other ? ' ansp-piece--other' : ''; ?>" data-ansp-piece>
 				<h4 class="ansp-piece-title"><?php echo esc_html( $ansp_piece_label ); ?></h4>
-				<ul class="ansp-piece-items">
-					<?php
-					foreach ( $ansp_bucket['rows'] as $ansp_material ) {
-						ansp_get_template(
-							'material-item',
-							array(
-								'material'   => $ansp_material,
-								'project_id' => $ansp_list_pid,
-								'selectable' => $ansp_list_selectable,
-							)
-						);
-					}
-					?>
-				</ul>
+				<?php $ansp_sections = ANSP_Materials::group_by_type( $ansp_bucket['rows'] ); ?>
+				<?php if ( ! $ansp_sections ) : ?>
+					<ul class="ansp-piece-items">
+						<?php
+						foreach ( $ansp_bucket['rows'] as $ansp_material ) {
+							ansp_get_template(
+								'material-item',
+								array(
+									'material'   => $ansp_material,
+									'project_id' => $ansp_list_pid,
+									'selectable' => $ansp_list_selectable,
+								)
+							);
+						}
+						?>
+					</ul>
+				<?php else : ?>
+					<?php foreach ( $ansp_sections as $ansp_section ) : ?>
+						<details class="ansp-typesection" data-ansp-typesection open>
+							<summary class="ansp-typesection-title">
+								<span class="ansp-typesection-label"><?php echo esc_html( $ansp_section['label'] ); ?></span>
+								<span class="ansp-typesection-count"><?php echo esc_html( (string) count( $ansp_section['rows'] ) ); ?></span>
+							</summary>
+							<ul class="ansp-piece-items">
+								<?php
+								foreach ( $ansp_section['rows'] as $ansp_material ) {
+									ansp_get_template(
+										'material-item',
+										array(
+											'material'   => $ansp_material,
+											'project_id' => $ansp_list_pid,
+											'selectable' => $ansp_list_selectable,
+											'show_type'  => false,
+										)
+									);
+								}
+								?>
+							</ul>
+						</details>
+					<?php endforeach; ?>
+				<?php endif; ?>
 			</li>
 		<?php endforeach; ?>
 	<?php endif; ?>

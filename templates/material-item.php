@@ -40,6 +40,13 @@ if ( ! isset( $material ) || ! is_array( $material ) ) {
 $ansp_project_id = isset( $project_id ) ? (int) $project_id : 0;
 $ansp_selectable = isset( $selectable ) ? (bool) $selectable : true;
 
+/*
+ * Inside a content-type section the heading already says "Audio", so the
+ * per-row chip saying "Recording" is both redundant and, because the two come
+ * from different label maps, quietly inconsistent. The caller suppresses it.
+ */
+$ansp_show_type = isset( $show_type ) ? (bool) $show_type : true;
+
 $ansp_id    = isset( $material['id'] ) ? (string) $material['id'] : '';
 $ansp_type  = isset( $material['type'] ) ? (string) $material['type'] : 'drive_link';
 $ansp_title = isset( $material['title'] ) ? (string) $material['title'] : '';
@@ -141,7 +148,9 @@ $ansp_is_gdoc = ( 1 === preg_match( '#^https?://docs\.google\.com/(?:document|sp
 		<?php endif; ?>
 
 		<ul class="ansp-matrow-chips" aria-label="<?php esc_attr_e( 'Type and tags', 'ans-singers-portal' ); ?>">
+			<?php if ( $ansp_show_type ) : ?>
 			<li class="ansp-tag-chip ansp-tag-chip--type"><?php echo esc_html( $ansp_type_label ); ?></li>
+		<?php endif; ?>
 			<?php foreach ( $ansp_chips as $ansp_tag ) : ?>
 				<li class="ansp-tag-chip"><?php echo esc_html( $ansp_tag ); ?></li>
 			<?php endforeach; ?>

@@ -248,6 +248,25 @@
 					}
 				} );
 
+				// A content-type section whose rows are all filtered out goes the
+				// same way, and BEFORE the piece pass below - otherwise a piece
+				// could survive on the strength of a section that is itself empty.
+				Array.prototype.slice.call( list.querySelectorAll( '[data-ansp-typesection]' ) ).forEach( function ( section ) {
+					var sectionRows = Array.prototype.slice.call( section.querySelectorAll( '.ansp-matrow' ) );
+					var sectionLive = sectionRows.some( function ( row ) {
+						return ! row.hasAttribute( 'hidden' );
+					} );
+					if ( ! sectionRows.length ) {
+						sectionLive = true;
+					}
+					section.classList.toggle( 'is-filtered-out', ! sectionLive );
+					if ( sectionLive ) {
+						section.removeAttribute( 'hidden' );
+					} else {
+						section.setAttribute( 'hidden', 'hidden' );
+					}
+				} );
+
 				// Second pass: a piece whose every material is filtered out must
 				// go too, or the list keeps a heading standing over nothing.
 				Array.prototype.slice.call( list.querySelectorAll( '[data-ansp-piece]' ) ).forEach( function ( piece ) {

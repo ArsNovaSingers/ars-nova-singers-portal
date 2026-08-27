@@ -58,10 +58,13 @@ class ANSP_Materials {
 	}
 
 	/**
-	 * Auto content-type tag label for each material type (v1.2.0).
+	 * The heading each content type gets when a piece holds more than one kind.
 	 *
-	 * These labels are appended to a material's manual tags so singers can
-	 * filter by content type even when no tag was typed.
+	 * These were appended to every material's tags until 1.19.0, which is what
+	 * made the tag filter useless on a project of one type. They now label the
+	 * sections in the materials list instead - the same words, doing a job they
+	 * are actually suited to. Distinct from types(), which labels the chip on an
+	 * individual row.
 	 *
 	 * @return array<string,string> type => tag label.
 	 */
@@ -191,10 +194,21 @@ class ANSP_Materials {
 	}
 
 	/**
-	 * A material's EFFECTIVE tags: its manual tags PLUS the auto-derived
-	 * content-type label from its `type` (e.g. video_link → "Video"), deduped
-	 * case-insensitively. Used by the front-end filter and chips so content
-	 * type is always filterable even when Tom didn't type it as a tag.
+	 * A material's EFFECTIVE tags: the tags a human actually typed.
+	 *
+	 * This used to append the content-type label as well, so type was always
+	 * filterable. That was wrong, and it took real data to show why: the tag
+	 * filter is OR, so on a project of nineteen recordings the tag "Audio" sat
+	 * on every row and matched all of them. Ticking Audio AND Tenor returned all
+	 * nineteen, because in an OR filter the broadest tag you tick wins and every
+	 * narrower one is decoration.
+	 *
+	 * Content type is now expressed as a SECTION in the list instead of a tag in
+	 * the filter - see group_by_type(). That leaves the filter one-dimensional,
+	 * at which point OR is simply the right answer and there is no AND/OR
+	 * question to get wrong. A row carrying no typed tags has no tags at all
+	 * again, so it stays visible under every filter, which is what "general
+	 * material" should mean.
 	 *
 	 * @param array $row Material row.
 	 * @return string[]
@@ -203,13 +217,64 @@ class ANSP_Materials {
 		if ( ! is_array( $row ) ) {
 			return array();
 		}
-		$tags   = self::get_tags( $row );
-		$type   = isset( $row['type'] ) ? (string) $row['type'] : '';
-		$labels = self::type_tag_labels();
-		if ( isset( $labels[ $type ] ) ) {
-			$tags[] = $labels[ $type ];
+		return self::sanitize_tags( self::get_tags( $row ) );
+	}
+
+	/**
+	 * Split one piece's rows into content-type sections, in a musical order.
+	 *
+	 * Scores first, then audio, then everything else - which is the order a
+	 * singer wants them in, not alphabetical.
+	 *
+	 * Returns an EMPTY array when every row is the same type. That is the signal
+	 * to render the rows plainly: a section heading over the only kind of thing
+	 * present tells nobody anything, and Bernstein's two files should not get
+	 * two headings.
+	 *
+	 * @param array[] $rows Material rows for one piece.
+	 * @return array[] Each: array( 'type' => string, 'label' => string, 'rows' => array[] ).
+	 */
+	public static function group_by_type( $rows ) {
+		if ( ! is_array( $rows ) || count( $rows ) < 2 ) {
+			return array();
 		}
-		return self::sanitize_tags( $tags );
+
+		$order   = array_keys( self::types() );
+		$labels  = self::type_tag_labels();
+		$buckets = array();
+
+		foreach ( $rows as $row ) {
+			$type = is_array( $row ) && isset( $row['type'] ) ? (string) $row['type'] : '';
+			if ( ! isset( $buckets[ $type ] ) ) {
+				$buckets[ $type ] = array();
+			}
+			$buckets[ $type ][] = $row;
+		}
+
+		if ( count( $buckets ) < 2 ) {
+			return array();
+		}
+
+		$out = array();
+		foreach ( $order as $type ) {
+			if ( ! empty( $buckets[ $type ] ) ) {
+				$out[] = array(
+					'type'  => $type,
+					'label' => isset( $labels[ $type ] ) ? $labels[ $type ] : $type,
+					'rows'  => $buckets[ $type ],
+				);
+				unset( $buckets[ $type ] );
+			}
+		}
+		// Anything with a type we do not know about still has to appear.
+		foreach ( $buckets as $type => $type_rows ) {
+			$out[] = array(
+				'type'  => (string) $type,
+				'label' => '' === $type ? __( 'Other', 'ans-singers-portal' ) : (string) $type,
+				'rows'  => $type_rows,
+			);
+		}
+		return $out;
 	}
 
 	/**

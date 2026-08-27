@@ -470,6 +470,51 @@
 	margin: 0;
 }
 
+/*
+ * Content-type sections inside a piece. <details>/<summary> means collapsing
+ * is the browser's job and costs no JavaScript, and a section left open
+ * survives a filter change because nothing re-renders.
+ *
+ * Open by default, deliberately. A singer who cannot find their music is a
+ * worse failure than a page that scrolls, so nothing starts hidden.
+ */
+.ansp-typesection {
+	margin: 0.35rem 0 0.15rem;
+}
+.ansp-typesection[hidden],
+.ansp-typesection.is-filtered-out {
+	display: none;
+}
+.ansp-typesection-title {
+	display: flex;
+	align-items: center;
+	gap: 0.45rem;
+	padding: 0.3rem 0.9rem;
+	cursor: pointer;
+	list-style: none;
+	font-size: 0.76em;
+	font-weight: 700;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+	opacity: 0.68;
+}
+.ansp-typesection-title::-webkit-details-marker {
+	display: none;
+}
+.ansp-typesection-title::before {
+	content: "\25B8";
+	display: inline-block;
+	font-size: 1.1em;
+	transition: transform 0.12s ease;
+}
+.ansp-typesection[open] > .ansp-typesection-title::before {
+	transform: rotate( 90deg );
+}
+.ansp-typesection-count {
+	font-weight: 600;
+	opacity: 0.75;
+}
+
 .ansp-matrow-player {
 	grid-column: 2;
 	min-width: 0;

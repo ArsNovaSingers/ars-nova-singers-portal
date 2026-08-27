@@ -100,6 +100,24 @@ $ansp_is_gdoc = ( 1 === preg_match( '#^https?://docs\.google\.com/(?:document|sp
 		<p class="ansp-material-note"><?php echo esc_html( $ansp_note ); ?></p>
 	<?php endif; ?>
 
+	<?php if ( class_exists( 'ANSP_Player' ) && ANSP_Player::is_playable( $material ) ) : ?>
+		<div class="ansp-matrow-player">
+			<?php
+			/*
+			 * preload="none" is load-bearing, not tidiness. Nineteen movements on
+			 * one project would otherwise be nineteen Drive fetches the moment the
+			 * page opened, for tracks nobody asked to hear. Nothing is fetched
+			 * until someone presses play; after that the browser streams it
+			 * progressively and caches it, so a second listen costs nothing.
+			 */
+			?>
+			<audio controls preload="none"
+				src="<?php echo esc_url( ANSP_Player::play_url( $ansp_project_id, $ansp_id ) ); ?>">
+				<?php esc_html_e( 'Your browser cannot play this here — use Download instead.', 'ans-singers-portal' ); ?>
+			</audio>
+		</div>
+	<?php endif; ?>
+
 	<div class="ansp-matrow-foot">
 		<?php if ( '' === $ansp_url ) : ?>
 			<span class="ansp-matrow-hint"><?php esc_html_e( 'No link yet', 'ans-singers-portal' ); ?></span>

@@ -470,6 +470,22 @@
 	margin: 0;
 }
 
+.ansp-matrow-player {
+	grid-column: 2;
+	min-width: 0;
+	margin: 0.2rem 0 0.1rem;
+}
+/*
+ * No explicit height: browsers size native audio controls differently and
+ * forcing one clips the buttons in Safari. Width is bounded so a player does
+ * not stretch across a wide screen and dwarf the title above it.
+ */
+.ansp-matrow-player audio {
+	display: block;
+	width: 100%;
+	max-width: 30rem;
+}
+
 .ansp-matrow-foot {
 	grid-column: 2;
 	min-width: 0;

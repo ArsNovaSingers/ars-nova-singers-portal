@@ -60,6 +60,7 @@ require_once ANSP_DIR . 'includes/class-ansp-ai-bio.php';
 require_once ANSP_DIR . 'includes/class-ansp-rest.php';
 require_once ANSP_DIR . 'includes/class-ansp-scores-source.php';
 require_once ANSP_DIR . 'includes/class-ansp-mirror-rest.php';
+require_once ANSP_DIR . 'includes/class-ansp-player.php';
 
 /**
  * Boot the plugin.
@@ -92,6 +93,7 @@ function ansp_init() {
 	new ANSP_Materials_Zip(); // Server-side single + bulk .zip download of materials.
 	ANSP_Scores_Source::init();  // Published sheet music from the device-sync mirror, read-only.
 	ANSP_Mirror_Rest::init();  // REST routes so the mirror can be configured without wp-admin.
+	ANSP_Player::init();  // Inline playback for rehearsal recordings.
 	new ANSP_Project_Meta();
 	new ANSP_Profiles();
 	new ANSP_Login();

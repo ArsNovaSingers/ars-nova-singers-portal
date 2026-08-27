@@ -129,6 +129,23 @@ class ANSP_Mirror_Rest {
 
 		register_rest_route(
 			self::NS,
+			'/portal/dav',
+			array(
+				array(
+					'methods'             => 'GET',
+					'permission_callback' => $perm,
+					'callback'            => array( __CLASS__, 'get_dav' ),
+				),
+				array(
+					'methods'             => 'POST',
+					'permission_callback' => $perm,
+					'callback'            => array( __CLASS__, 'set_dav' ),
+				),
+			)
+		);
+
+		register_rest_route(
+			self::NS,
 			'/portal/project/(?P<id>\d+)/mirror',
 			array(
 				array(
@@ -143,6 +160,77 @@ class ANSP_Mirror_Rest {
 				),
 			)
 		);
+	}
+
+	/* -------------------------------------------------------------------
+	 * WebDAV panel
+	 * ---------------------------------------------------------------- */
+
+	/**
+	 * What the WebDAV panel is configured to show, and where it would point.
+	 *
+	 * Returns the resolved address per configured group as well as the raw
+	 * settings, because "what did I set" and "what will a singer actually see"
+	 * are different questions and only the second one is ever the bug.
+	 *
+	 * No password is stored here or returned by this route. The credential
+	 * lives in the worker's own secret; this side knows only a username.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public static function get_dav() {
+		$settings = ANSP_Dav::settings();
+		$base     = ANSP_Dav::base_url();
+
+		$resolved = array();
+		foreach ( $settings['users'] as $group => $username ) {
+			$resolved[] = array(
+				'group'    => $group,
+				'username' => $username,
+				'url'      => ANSP_Dav::url_for_group( $group ),
+			);
+		}
+
+		return rest_ensure_response(
+			array(
+				'ok'            => true,
+				'enabled'       => $settings['enabled'],
+				'base'          => $base,
+				'base_source'   => '' !== $settings['base'] ? 'override' : 'derived from the worker URL',
+				'show_password' => $settings['show_password'],
+				'note'          => $settings['note'],
+				'groups'        => $resolved,
+				'usable'        => $settings['enabled'] && '' !== $base && ! empty( $settings['users'] ),
+			)
+		);
+	}
+
+	/**
+	 * Configure the WebDAV panel.
+	 *
+	 * `users` is a map of mirror group id => username, and it REPLACES the map
+	 * rather than merging into it. Merging would make removing a group's
+	 * credential impossible over REST, and a stale credential left visible on
+	 * a page is the failure that matters here.
+	 *
+	 * @param WP_REST_Request $req Request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function set_dav( $req ) {
+		$guard = self::guard( $req );
+		if ( is_wp_error( $guard ) ) {
+			return $guard;
+		}
+
+		$changes = array();
+		foreach ( array( 'enabled', 'show_password', 'base', 'note', 'users' ) as $field ) {
+			if ( null !== $req->get_param( $field ) ) {
+				$changes[ $field ] = $req->get_param( $field );
+			}
+		}
+
+		ANSP_Dav::update( $changes );
+		return self::get_dav();
 	}
 
 	/* -------------------------------------------------------------------

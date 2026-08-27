@@ -301,4 +301,26 @@ if ( $ansp_season instanceof WP_Term ) {
 			<?php $ansp_first = false; ?>
 		<?php endforeach; ?>
 	</div>
+
+	<?php
+	/*
+	 * The bulk-sync address, once per tab rather than once per project.
+	 *
+	 * A tab is one group and the mirror holds one folder per group, so
+	 * repeating this under every project would be the same address printed
+	 * four times. It sits below the projects deliberately: nearly everyone
+	 * taps a file and reads it, and this must not be what a singer scrolls
+	 * past to reach their music.
+	 *
+	 * Which folder it points at is read from the projects themselves, not
+	 * from this tab's WordPress group slug — those are different names and
+	 * assuming otherwise is what made v1.15.0 find nothing at all.
+	 */
+	$ansp_dav_panel = class_exists( 'ANSP_Dav' ) ? ANSP_Dav::panel_for( $ansp_projects ) : null;
+	if ( is_array( $ansp_dav_panel ) ) {
+		// The key is the variable name: ansp_get_template() extracts $args
+		// verbatim, with no prefix added.
+		ansp_get_template( 'dav-panel', array( 'ansp_dav' => $ansp_dav_panel ) );
+	}
+	?>
 <?php endif; ?>

@@ -372,5 +372,60 @@
 				} );
 			} );
 		} );
+
+		// ---- Copy buttons (WebDAV address, username) ----------------------
+		/*
+		 * Delegated from the document, not bound per button, because the
+		 * panel is inside a <details> and a tab panel that may be hidden at
+		 * load. Binding on discovery would miss anything revealed later.
+		 *
+		 * navigator.clipboard is unavailable on a non-secure origin and can
+		 * be refused even on a secure one, so the fallback is not decoration
+		 * — a singer on a tablet who taps Copy and gets nothing has no idea
+		 * whether it worked. Selecting the text is the honest fallback: they
+		 * can then copy it themselves.
+		 */
+		root.addEventListener( 'click', function ( e ) {
+			var btn = e.target.closest ? e.target.closest( '[data-ansp-copy]' ) : null;
+			if ( ! btn ) {
+				return;
+			}
+			var text = btn.getAttribute( 'data-ansp-copy' ) || '';
+			if ( ! text ) {
+				return;
+			}
+
+			var say = function ( word ) {
+				var original = btn.getAttribute( 'data-ansp-copy-label' ) || btn.textContent;
+				btn.setAttribute( 'data-ansp-copy-label', original );
+				btn.textContent = word;
+				window.setTimeout( function () {
+					btn.textContent = btn.getAttribute( 'data-ansp-copy-label' ) || original;
+				}, 1600 );
+			};
+
+			var selectInstead = function () {
+				var code = btn.parentNode && btn.parentNode.querySelector( '[data-ansp-copy-value], code' );
+				if ( code && window.getSelection && document.createRange ) {
+					var range = document.createRange();
+					range.selectNodeContents( code );
+					var sel = window.getSelection();
+					sel.removeAllRanges();
+					sel.addRange( range );
+				}
+				say( 'Select and copy' );
+			};
+
+			if ( navigator.clipboard && navigator.clipboard.writeText ) {
+				navigator.clipboard.writeText( text ).then(
+					function () {
+						say( 'Copied' );
+					},
+					selectInstead
+				);
+			} else {
+				selectInstead();
+			}
+		} );
 	} );
 } )();

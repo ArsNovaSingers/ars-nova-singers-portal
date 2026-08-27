@@ -4,7 +4,7 @@ Tags: members, portal, choir, private, materials
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.21.0
+Stable tag: 1.22.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -70,6 +70,14 @@ Deactivation removes nothing. Uninstall also keeps everything by default; define
 Since 1.2.0 there are no per-material grants: any logged-in portal member sees every material in a project they can access. Give the guest a portal account (Roster → Send portal invite) and, if the project is group-tagged, add them to that group (e.g. Special Guests).
 
 == Changelog ==
+
+= 1.22.0 =
+* **The WebDAV address is on the page.** Under each group's projects there is now a collapsed "Sync this music to your tablet" panel carrying the server address and username, with Copy buttons. A singer with a WebDAV-capable file app can mount the season's folder and pull every score in one action, then re-sync later and have only what changed come down.
+* **The password is deliberately not on the page.** The credential is shared per group today, and a shared secret printed into a page is a shared secret in every browser cache and every screenshot. The panel says so rather than leaving a blank.
+* **The panel points at the folder the projects actually name**, read from each project's mirror address — not derived from the WordPress group slug. Those are different names (`cs` here, `chamber-singers` in the mirror), and assuming they matched is what made 1.15.0 find nothing at all. Projects that disagree fall back to the root of the tree and let the credential decide what is listed.
+* **Nothing renders unless it would work.** No worker configured, switched off, or no username for the group, and the panel is absent rather than showing an address that cannot be logged into. Clearing a username removes the panel with it.
+* Configurable over REST at `ars-nova/v1 portal/dav` (GET/POST), like the mirror settings in 1.16.0 — no wp-admin needed. The read reports what a singer would actually see, not just what was set.
+* Collapsed and below the music on purpose. Nearly every singer taps a file and reads it; this is the route for the few who want the whole season on a tablet, and it should not be what anyone scrolls past to reach their part.
 
 = 1.21.0 =
 * **One title at the top of the portal instead of two.** The WordPress page was called "Singers Portal" and the portal printed its own heading saying the same thing, so the first screen — the part a singer sees before scrolling — was largely spent saying it twice.

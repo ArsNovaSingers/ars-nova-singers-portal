@@ -299,31 +299,9 @@
 				updateSelection();
 			}
 
-			function setAll( state ) {
-				checkboxes.forEach( function ( box ) {
-					box.checked = state;
-				} );
-				applyFilter();
-			}
-
 			checkboxes.forEach( function ( box ) {
 				box.addEventListener( 'change', applyFilter );
 			} );
-
-			if ( filter ) {
-				var tagAll = filter.querySelector( '[data-ansp-tagfilter-all]' );
-				var tagNone = filter.querySelector( '[data-ansp-tagfilter-none]' );
-				if ( tagAll ) {
-					tagAll.addEventListener( 'click', function () {
-						setAll( true );
-					} );
-				}
-				if ( tagNone ) {
-					tagNone.addEventListener( 'click', function () {
-						setAll( false );
-					} );
-				}
-			}
 
 			list.addEventListener( 'change', function ( e ) {
 				if ( e.target && e.target.hasAttribute && e.target.hasAttribute( 'data-ansp-select' ) ) {

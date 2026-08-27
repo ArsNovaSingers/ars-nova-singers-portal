@@ -4,7 +4,7 @@ Tags: members, portal, choir, private, materials
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.19.0
+Stable tag: 1.20.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -70,6 +70,12 @@ Deactivation removes nothing. Uninstall also keeps everything by default; define
 Since 1.2.0 there are no per-material grants: any logged-in portal member sees every material in a project they can access. Give the guest a portal account (Roster → Send portal invite) and, if the project is group-tagged, add them to that group (e.g. Special Guests).
 
 == Changelog ==
+
+= 1.20.0 =
+* **The player can be scrubbed.** A recording used to start, run to the end of whatever the browser had buffered, and stop — and the progress bar could not be dragged at all. The endpoint was answering every request with the whole file from byte zero, and a browser that cannot ask for "the bytes around 4:12" cannot seek to 4:12. It now serves byte ranges, so the bar drags and a movement can be re-heard from the middle without reloading it.
+* The audio is **cached on the server the first time it is played**, outside the web root where it cannot be reached by guessing a URL. Twenty seeks within one movement now cost one fetch from Drive instead of twenty — which is what makes scrubbing feel instant rather than merely possible.
+* **The player moved to the right of the title**, into the whitespace that was sitting empty there, instead of taking a line of its own between the title and the buttons. A recording row drops from 144px to 110px — on a project of nineteen movements that is most of a screen of scrolling recovered. Rows with no recording are laid out exactly as before. On a phone, where there is no whitespace beside a title to reclaim, the player stays under it at full width.
+* **The tag filter's All and None buttons are gone.** With content type no longer a tag (1.19.0) the chips are voice parts, and "All" was the state the page already arrives in. The chips themselves are unchanged: tick nothing and you are where None used to put you. The **Select all / Select none** buttons above the .zip download are a different pair and are untouched.
 
 = 1.19.0 =
 * **The tag filter narrows again.** Ticking Audio and Tenor together used to leave every recording on the page. The content type was being added to each material's tags behind the scenes, so "Audio" sat on all nineteen rows of a project and matched all of them — and because the filter shows anything matching any ticked tag, the broadest choice won and the narrow ones did nothing.

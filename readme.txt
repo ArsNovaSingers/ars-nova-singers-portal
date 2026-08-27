@@ -4,7 +4,7 @@ Tags: members, portal, choir, private, materials
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.17.0
+Stable tag: 1.18.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -70,6 +70,12 @@ Deactivation removes nothing. Uninstall also keeps everything by default; define
 Since 1.2.0 there are no per-material grants: any logged-in portal member sees every material in a project they can access. Give the guest a portal account (Roster → Send portal invite) and, if the project is group-tagged, add them to that group (e.g. Special Guests).
 
 == Changelog ==
+
+= 1.18.0 =
+* **Rehearsal recordings play on the page.** Every recording now has a small player in its row, so working through eleven movements no longer means eleven trips to a new browser tab and back. Open and Download are still there beside it.
+* Nothing is fetched until you press play. Opening a project with nineteen tracks does not quietly download nineteen files for music nobody asked to hear; the browser then streams a track as it arrives, so it starts almost immediately rather than waiting for the whole file, and remembers it so a second listen is instant.
+* This reverses part of 1.14.0, which stripped inline previews from the materials list. That change was about previews being page-sized embeds that turned twelve materials into several screens of scrolling. A small audio control is not that, and the list stays a list.
+* Scores and web links are unaffected: a player appears only where there is actually audio to play.
 
 = 1.17.0 =
 * **Sheet-music links no longer expire — and this fixes a real failure, not a theoretical one.** Clicking Open on a score returned a page of raw XML reading "the provided token has expired". The mirror signs each file's address for fifteen minutes; the page held that address in the link and then sat open in a tab while the clock ran. A singer opens the Hub, reads the rehearsal note, makes a cup of tea, clicks — that is the ordinary way anyone uses a web page, and it failed.

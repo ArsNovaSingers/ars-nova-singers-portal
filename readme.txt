@@ -4,7 +4,7 @@ Tags: members, portal, choir, private, materials
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.18.0
+Stable tag: 1.19.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -70,6 +70,13 @@ Deactivation removes nothing. Uninstall also keeps everything by default; define
 Since 1.2.0 there are no per-material grants: any logged-in portal member sees every material in a project they can access. Give the guest a portal account (Roster → Send portal invite) and, if the project is group-tagged, add them to that group (e.g. Special Guests).
 
 == Changelog ==
+
+= 1.19.0 =
+* **The tag filter narrows again.** Ticking Audio and Tenor together used to leave every recording on the page. The content type was being added to each material's tags behind the scenes, so "Audio" sat on all nineteen rows of a project and matched all of them — and because the filter shows anything matching any ticked tag, the broadest choice won and the narrow ones did nothing.
+* Content type is no longer a tag. Ticking **Tenor** now hides the other three parts and keeps everything that belongs to nobody in particular — the movements, the score. Ticking Tenor and Bass shows both. A material with no tags on it stays visible whatever is ticked, which is what "everyone's material" should mean.
+* **Content types are now collapsible sections instead.** A piece holding both a score and rehearsal tracks shows them under Sheet Music and Audio headings, with a count, either of which can be folded away. Scores come first.
+* Those sections sit **inside** a piece, so a work and everything belonging to it stay together — a score is never in one place and its recordings in another. A piece holding only one kind of thing is left exactly as it was, with no heading it does not need.
+* Sections start open. Nothing is hidden from a singer by default.
 
 = 1.18.0 =
 * **Rehearsal recordings play on the page.** Every recording now has a small player in its row, so working through eleven movements no longer means eleven trips to a new browser tab and back. Open and Download are still there beside it.

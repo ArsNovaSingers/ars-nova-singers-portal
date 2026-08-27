@@ -4,7 +4,7 @@ Tags: members, portal, choir, private, materials
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.22.1
+Stable tag: 1.23.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -70,6 +70,13 @@ Deactivation removes nothing. Uninstall also keeps everything by default; define
 Since 1.2.0 there are no per-material grants: any logged-in portal member sees every material in a project they can access. Give the guest a portal account (Roster → Send portal invite) and, if the project is group-tagged, add them to that group (e.g. Special Guests).
 
 == Changelog ==
+
+= 1.23.0 =
+* **A "Smaller Files" screen, under Singers Portal.** Some sheet music is scanned in colour at far higher resolution than a tablet can show: it looks identical and the file is many times bigger. The worker can now produce a smaller copy and prove it still renders correctly — and this is where Tom says yes or no to each one. Measured on the real Chamber scores: 271 MB of sheet music becomes about 33 MB.
+* **Nothing changes without a person.** The screen offers; it never applies. Approving calls the worker's ordinary publish, so an approved copy keeps the exact same filename (annotations follow it), the previous version is kept and can be put back, and the page-count gate still refuses anything that would move a singer's markings.
+* **The two buttons that matter are Open, not Approve.** Every way this feature can go wrong produces a file that looks like a triumph in a table and is unreadable on the page — it happened twice while it was being built. So each candidate leads with "Open the smaller copy" and "Open what singers see now", side by side, and asks Tom to look at a page with small print and one with his own pencil markings.
+* Those preview links are minted when clicked rather than when the page is drawn, so a page left open through a conversation about whether to approve something still works.
+* Plain language throughout: no "candidate", no "staging", no percentage without a sentence beside it explaining what it means.
 
 = 1.22.1 =
 * **A tab never advertises another group's credential.** 1.22.0 was looser than it should have been: a tab whose projects named no mirror folder, or named two, fell back to the root of the tree, and a group without its own username borrowed the only configured one. Against the real staging data that meant the **Ars Nova Singers tab — the full choir — would have shown a Chamber Singers username**, because its projects sit in `ensemble-singers` and `main` rather than in one folder.

@@ -22,7 +22,18 @@
 	gap: 0.5rem;
 	margin-bottom: 1rem;
 }
-.ansp-portal-title { margin: 0; }
+/*
+ * Sized here rather than left to the theme. This became an <h1> when the
+ * theme's page title was hidden, and a Kadence <h1> is a hero heading — it
+ * would have spent the space the hidden title just gave back. The portal is
+ * a working page a singer opens to find their music, so the title announces
+ * where they are and then gets out of the way.
+ */
+.ansp-portal-title {
+	margin: 0;
+	font-size: 1.6rem;
+	line-height: 1.2;
+}
 .ansp-portal-welcome { margin: 0; font-size: 0.95em; opacity: 0.85; }
 .ansp-logout { margin-left: 0.75em; }
 

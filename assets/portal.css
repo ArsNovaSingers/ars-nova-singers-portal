@@ -323,8 +323,6 @@
 	letter-spacing: 0.05em;
 	padding: 0 0.35rem;
 }
-.ansp-tagfilter-bulk { margin-bottom: 0.5rem; }
-.ansp-tagfilter-bulk .ansp-btn { margin-right: 0.4rem; }
 .ansp-tagfilter-options {
 	display: flex;
 	flex-wrap: wrap;
@@ -409,14 +407,18 @@
 	overflow: hidden;
 }
 /*
- * Two columns, not three: the checkbox, then everything else. The title owns
+ * Three columns: the checkbox, the content, and the player. The title owns
  * row 1 of the content column so the eye runs straight down a column of piece
  * names; the buttons and the type/tag chips share the bottom line, chips
  * pushed right by `margin-left:auto`.
+ *
+ * The third track is empty on everything that is not a recording, and an
+ * empty `auto` track is zero wide — so a score row is laid out exactly as it
+ * was before the player existed.
  */
 .ansp-matrow {
 	display: grid;
-	grid-template-columns: auto 1fr;
+	grid-template-columns: auto minmax( 0, 1fr ) auto;
 	align-items: start;
 	gap: 0.3rem 0.85rem;
 	padding: 0.75rem 0.9rem;
@@ -515,20 +517,33 @@
 	opacity: 0.75;
 }
 
+/*
+ * The player rides the right-hand end of the row, not a line of its own. A
+ * recording used to be three stacked lines — title, player, buttons — and on
+ * a project of nineteen movements that height is most of what a singer has to
+ * scroll past to reach their own part. The space to the right of a title was
+ * empty; the player fills it, and the row is now as tall as the player alone.
+ *
+ * Spanning every row (`1 / -1`) is what makes it fill: the title, any note
+ * and the button line stack to its left inside one column, and the player is
+ * centred against the whole stack rather than pinned to the first line.
+ */
 .ansp-matrow-player {
-	grid-column: 2;
+	grid-column: 3;
+	grid-row: 1 / -1;
+	align-self: center;
 	min-width: 0;
-	margin: 0.2rem 0 0.1rem;
+	margin: 0;
 }
 /*
  * No explicit height: browsers size native audio controls differently and
- * forcing one clips the buttons in Safari. Width is bounded so a player does
- * not stretch across a wide screen and dwarf the title above it.
+ * forcing one clips the buttons in Safari. A fixed width, not a percentage —
+ * this track is `auto`, so a percentage would resolve against nothing.
  */
 .ansp-matrow-player audio {
 	display: block;
-	width: 100%;
-	max-width: 30rem;
+	width: 17rem;
+	max-width: 100%;
 }
 
 .ansp-matrow-foot {
@@ -560,15 +575,34 @@
 }
 
 /*
- * A list with no checkbox column (Past Projects) is one column, not two, or
- * the content lands in the narrow track meant for the checkbox.
+ * A list with no checkbox column (Past Projects) drops the narrow first
+ * track, or the content lands in the lane meant for the checkbox. The player
+ * track stays — it is the last column either way.
  */
-.ansp-materials--noselect .ansp-matrow { grid-template-columns: 1fr; }
+.ansp-materials--noselect .ansp-matrow { grid-template-columns: minmax( 0, 1fr ) auto; }
 .ansp-materials--noselect .ansp-matrow-title,
 .ansp-materials--noselect .ansp-material-note,
 .ansp-materials--noselect .ansp-matrow-foot { grid-column: 1; }
+.ansp-materials--noselect .ansp-matrow-player { grid-column: 2; }
 
 @media (max-width: 680px) {
+	/*
+	 * A phone has no whitespace to the right of a title to reclaim, and a
+	 * 17rem player beside one would squeeze the title to a few characters
+	 * per line. Below this width the player goes back under the title, full
+	 * width, which is the pre-1.20.0 layout.
+	 */
+	.ansp-matrow { grid-template-columns: auto minmax( 0, 1fr ); }
+	.ansp-materials--noselect .ansp-matrow { grid-template-columns: minmax( 0, 1fr ); }
+	.ansp-matrow-player {
+		grid-column: 2;
+		grid-row: auto;
+		align-self: stretch;
+		margin: 0.2rem 0 0.1rem;
+	}
+	.ansp-materials--noselect .ansp-matrow-player { grid-column: 1; }
+	.ansp-matrow-player audio { width: 100%; }
+
 	/* Too narrow to justify right — chips take their own line, left-aligned. */
 	.ansp-matrow-chips {
 		margin-left: 0;

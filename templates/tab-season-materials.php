@@ -254,10 +254,6 @@ if ( $ansp_season instanceof WP_Term ) {
 						<?php if ( ! empty( $ansp_tag_union ) ) : ?>
 							<fieldset class="ansp-tagfilter" data-ansp-tagfilter>
 								<legend class="ansp-tagfilter-legend"><?php esc_html_e( 'Filter by tag', 'ans-singers-portal' ); ?></legend>
-								<div class="ansp-tagfilter-bulk">
-									<button type="button" class="ansp-btn ansp-btn--small ansp-btn--ghost" data-ansp-tagfilter-all><?php esc_html_e( 'All', 'ans-singers-portal' ); ?></button>
-									<button type="button" class="ansp-btn ansp-btn--small ansp-btn--ghost" data-ansp-tagfilter-none><?php esc_html_e( 'None', 'ans-singers-portal' ); ?></button>
-								</div>
 								<div class="ansp-tagfilter-options">
 									<?php foreach ( $ansp_tag_union as $ansp_tag ) : ?>
 										<label class="ansp-tagfilter-option">

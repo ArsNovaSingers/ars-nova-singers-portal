@@ -537,12 +537,22 @@
 }
 /*
  * No explicit height: browsers size native audio controls differently and
- * forcing one clips the buttons in Safari. A fixed width, not a percentage —
- * this track is `auto`, so a percentage would resolve against nothing.
+ * forcing one clips the buttons in Safari.
+ *
+ * Width is as generous as the row can stand, and that is a musical decision
+ * rather than a visual one. The scrubber is the whole width of the control
+ * minus its buttons, so every pixel of width is resolution: at 17rem a
+ * six-minute movement gives about 1.4 seconds per pixel and finding bar 58
+ * is a guess, where at 34rem it is half that and the drag lands. Singers use
+ * this to re-hear one phrase over and over, so precision here is the feature.
+ *
+ * `clamp` and not a fixed width: `vw` lets a wide screen spend its space on
+ * the scrubber, the 24rem floor keeps it usable on a small laptop, and the
+ * 38rem ceiling stops it swallowing a row on a very wide monitor.
  */
 .ansp-matrow-player audio {
 	display: block;
-	width: 17rem;
+	width: clamp( 24rem, 42vw, 38rem );
 	max-width: 100%;
 }
 
@@ -585,24 +595,28 @@
 .ansp-materials--noselect .ansp-matrow-foot { grid-column: 1; }
 .ansp-materials--noselect .ansp-matrow-player { grid-column: 2; }
 
-@media (max-width: 680px) {
-	/*
-	 * A phone has no whitespace to the right of a title to reclaim, and a
-	 * 17rem player beside one would squeeze the title to a few characters
-	 * per line. Below this width the player goes back under the title, full
-	 * width, which is the pre-1.20.0 layout.
-	 */
+/*
+ * Below this width the player goes back under the title at full width — the
+ * pre-1.20.0 layout. The breakpoint is set by the player, not by the phone:
+ * a 24rem control beside a title needs roughly 900px of row before the title
+ * starts breaking into three-word lines, and a squeezed title costs a singer
+ * more than a stacked row does. Full width down here is not a consolation
+ * either — it is wider than the desktop control, so precision improves.
+ */
+@media (max-width: 900px) {
 	.ansp-matrow { grid-template-columns: auto minmax( 0, 1fr ); }
 	.ansp-materials--noselect .ansp-matrow { grid-template-columns: minmax( 0, 1fr ); }
 	.ansp-matrow-player {
 		grid-column: 2;
 		grid-row: auto;
 		align-self: stretch;
-		margin: 0.2rem 0 0.1rem;
+		margin: 0.25rem 0 0.15rem;
 	}
 	.ansp-materials--noselect .ansp-matrow-player { grid-column: 1; }
 	.ansp-matrow-player audio { width: 100%; }
+}
 
+@media (max-width: 680px) {
 	/* Too narrow to justify right — chips take their own line, left-aligned. */
 	.ansp-matrow-chips {
 		margin-left: 0;

@@ -4,7 +4,7 @@ Tags: members, portal, choir, private, materials
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.15.1
+Stable tag: 1.16.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -70,6 +70,13 @@ Deactivation removes nothing. Uninstall also keeps everything by default; define
 Since 1.2.0 there are no per-material grants: any logged-in portal member sees every material in a project they can access. Give the guest a portal account (Roster → Send portal invite) and, if the project is group-tagged, add them to that group (e.g. Special Guests).
 
 == Changelog ==
+
+= 1.16.0 =
+* **The sheet-music mirror can be configured without opening wp-admin.** Every step needed to make published music appear was reachable only by a human at the WordPress admin screens, because the project post type is not exposed over REST and the mirror address is not a registered meta key - so the generic tools failed, and failed by reporting that the project did not exist. Three routes now cover it: the worker URL and token, one project's mirror address, and the whole mapping in a single call.
+* **The token can be written and can never be read back.** A read reports whether one is set, whether it came from a wp-config constant or the database, and a short fingerprint of it - enough to confirm two sites are using the same token, useless to anyone who intercepts the response. A worker URL that is not https is refused outright, because a bearer token travels over it, and an empty token is refused rather than silently stored - clearing one is a separate, deliberate flag.
+* Writes on the live site require an explicit confirmation flag, using the same production test the rest of the plugin already uses rather than a second copy of it that could drift.
+* Reading a project's mirror address also returns every address its groups actually hold, so a wrong address hands back the right one instead of an empty list. That is the difference between "this is broken" and "you want chamber-singers/26-27 CS".
+* Changing the worker URL or token now clears the cached answers immediately. Without that, ten minutes of results fetched with the old token look exactly like a fix that did not work, which is how a correct fix gets undone.
 
 = 1.15.1 =
 * **Fixes 1.15.0, which could not find anything.** The mirror stores two coordinates - published objects live at `scores/<group>/<project>/<file>` - and 1.15.0 could only be told about one of them. It derived the group from the WordPress group slug, which is wrong by construction: the group id is free text handed to the sync worker when a folder is first scanned, and the worker compares it exactly. Chamber Singers is `cs` in WordPress and `chamber-singers` in the mirror, so every lookup returned nothing, logged nothing and showed nothing.

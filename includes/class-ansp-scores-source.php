@@ -133,11 +133,11 @@ class ANSP_Scores_Source {
 	 * never as "nothing is published", because those look identical from here and
 	 * only one of them is worth telling a singer about.
 	 *
-	 * @param string $group_slug ans_group term slug, which is also the worker's group id.
+	 * @param string $group_slug The worker's group id, VERBATIM. Not a WP slug - see clean_group().
 	 * @return array[]
 	 */
 	public static function library( $group_slug ) {
-		$group_slug = sanitize_title( $group_slug );
+		$group_slug = static::clean_group( $group_slug );
 		if ( '' === $group_slug || ! self::is_configured() ) {
 			return array();
 		}
@@ -212,12 +212,13 @@ class ANSP_Scores_Source {
 			return $materials;
 		}
 
-		$groups = static::project_group_slugs( $project_id );
+		$target = static::mirror_target( $project_id );
+		$groups = $target['groups'];
 		if ( empty( $groups ) ) {
 			return $materials;
 		}
 
-		$wanted_project = static::project_key( $project_id );
+		$wanted_project = $target['project'];
 		$seen           = array();
 		$added          = array();
 
@@ -245,23 +246,93 @@ class ANSP_Scores_Source {
 	}
 
 	/**
-	 * The worker-side project name this WP project maps to.
+	 * Where in the mirror this project's scores live.
 	 *
-	 * Explicit meta wins; otherwise the project's own title, which is what matches
-	 * in practice because Tom's Drive folders and the WP projects are named the
-	 * same thing ("26-27 CS"). Falling back to the title rather than requiring the
-	 * field means this works on day one without anyone filling anything in, and
-	 * the field is there for when a name inevitably diverges.
+	 * The mirror stores two coordinates, not one: published objects are
+	 * `scores/<group>/<project>/<canonical>.pdf`. The group is NOT a WordPress
+	 * slug - it is whatever free-text label was handed to the worker's /scan when
+	 * that folder was first walked, and the worker compares it byte for byte.
+	 * Deriving it from the ans_group slug was the bug this method exists to fix:
+	 * Chamber Singers is `cs` in WordPress and `chamber-singers` in the mirror, so
+	 * every lookup returned nothing and said nothing.
+	 *
+	 * One field therefore carries the whole address. `chamber-singers/26-27 CS`
+	 * names both halves. A bare `26-27 CS` names only the project and lets the
+	 * group come from the project's own ans_group terms. Empty falls back to the
+	 * project title, which is a guess and should be expected to be wrong more
+	 * often than right - the two systems were named by different people for
+	 * different reasons and there is no cause for them to agree.
+	 *
+	 * Split on the FIRST slash only, so a nested project folder survives intact.
+	 *
+	 * @param int $project_id Project post ID.
+	 * @return array Two keys: 'groups' (string[]) and 'project' (string).
+	 */
+	public static function mirror_target( $project_id ) {
+		$project_id = (int) $project_id;
+		$explicit   = trim( (string) get_post_meta( $project_id, self::META_PROJECT, true ) );
+
+		if ( '' !== $explicit && false !== strpos( $explicit, '/' ) ) {
+			$parts   = explode( '/', $explicit, 2 );
+			$group   = static::clean_group( $parts[0] );
+			$project = trim( $parts[1] );
+			return array(
+				'groups'  => '' === $group ? array() : array( $group ),
+				'project' => $project,
+			);
+		}
+
+		$project = '' !== $explicit ? $explicit : trim( (string) get_the_title( $project_id ) );
+		return array(
+			'groups'  => static::project_group_slugs( $project_id ),
+			'project' => $project,
+		);
+	}
+
+	/**
+	 * The worker-side project name this WP project maps to.
 	 *
 	 * @param int $project_id Project post ID.
 	 * @return string
 	 */
 	public static function project_key( $project_id ) {
-		$explicit = trim( (string) get_post_meta( (int) $project_id, self::META_PROJECT, true ) );
-		if ( '' !== $explicit ) {
-			return $explicit;
+		$target = static::mirror_target( $project_id );
+		return $target['project'];
+	}
+
+	/**
+	 * The worker-side group id(s) this WP project reads from, for display only.
+	 *
+	 * @param int $project_id Project post ID.
+	 * @return string
+	 */
+	public static function project_group_key( $project_id ) {
+		$target = static::mirror_target( $project_id );
+		return empty( $target['groups'] ) ? '' : implode( ', ', $target['groups'] );
+	}
+
+	/**
+	 * A group id fit to sit in a URL path, without mangling it.
+	 *
+	 * sanitize_title() used to do this job, and that was the defect: it
+	 * lowercases and hyphenates, so a group scanned as "Full Group" would be
+	 * asked for as "full-group" and match nothing, with no error anywhere. The
+	 * worker compares the string exactly, so the only things worth removing here
+	 * are the ones that would break the path or let a value escape its own
+	 * segment. Everything else is passed through untouched, on purpose.
+	 *
+	 * @param string $group Raw group id.
+	 * @return string
+	 */
+	protected static function clean_group( $group ) {
+		$group = trim( (string) $group );
+		if ( false !== strpos( $group, '/' ) || false !== strpos( $group, '\\' ) ) {
+			return '';
 		}
-		return trim( (string) get_the_title( (int) $project_id ) );
+		if ( '.' === $group || '..' === $group ) {
+			return '';
+		}
+		return trim( preg_replace( '/[\x00-\x1F\x7F]/', '', $group ) );
 	}
 
 	/**
@@ -398,21 +469,25 @@ class ANSP_Scores_Source {
 	public static function render_meta_box( $post ) {
 		wp_nonce_field( 'ansp_save_scores_source', 'ansp_scores_source_nonce' );
 		$value  = (string) get_post_meta( $post->ID, self::META_PROJECT, true );
-		$actual = self::project_key( $post->ID );
+		$target = self::mirror_target( $post->ID );
+		$actual = $target['project'];
+		$groups = empty( $target['groups'] ) ? '' : implode( ', ', $target['groups'] );
 		?>
 		<p class="description">
-			<?php esc_html_e( 'Published sheet music for this project appears in the materials list automatically. Leave this blank unless the folder Tom publishes from is named differently from this project.', 'ans-singers-portal' ); ?>
+			<?php esc_html_e( 'Which mirror folder this project reads its published sheet music from, as group/project - for example chamber-singers/26-27 CS. The group is the folder Tom scanned, not the WordPress group name; the two are not required to match and usually do not. Singers Portal > Sheet-Music Mirror lists the exact strings the worker has.', 'ans-singers-portal' ); ?>
 		</p>
 		<p>
 			<input type="text" class="widefat" name="ansp_scores_project"
 				value="<?php echo esc_attr( $value ); ?>"
-				placeholder="<?php echo esc_attr( get_the_title( $post->ID ) ); ?>" />
+				placeholder="<?php echo esc_attr( get_the_title( $post->ID ) ); ?>"
+				spellcheck="false" autocomplete="off" />
 		</p>
 		<p class="description">
 			<?php
 			printf(
-				/* translators: %s: the project name currently being matched against the mirror */
-				esc_html__( 'Currently matching scores published under: %s', 'ans-singers-portal' ),
+				/* translators: 1: mirror group id, 2: mirror project name */
+				esc_html__( 'Currently reading group %1$s, project %2$s.', 'ans-singers-portal' ),
+				'<code>' . esc_html( '' !== $groups ? $groups : '—' ) . '</code>',
 				'<code>' . esc_html( '' !== $actual ? $actual : '—' ) . '</code>'
 			);
 			?>
@@ -563,39 +638,101 @@ class ANSP_Scores_Source {
 			return;
 		}
 
-		$groups = get_terms(
+		$probe = static::configured_mirror_groups();
+		$terms = get_terms(
 			array(
 				'taxonomy'   => 'ans_group',
 				'hide_empty' => false,
+				'fields'     => 'slugs',
 			)
 		);
-		if ( is_wp_error( $groups ) || empty( $groups ) ) {
-			echo '<p>' . esc_html__( 'No groups exist yet, so there is nothing to check against.', 'ans-singers-portal' ) . '</p>';
+		if ( is_array( $terms ) ) {
+			foreach ( $terms as $slug ) {
+				$probe[] = (string) $slug;
+			}
+		}
+		$probe = array_values( array_unique( array_filter( array_map( 'trim', $probe ) ) ) );
+
+		if ( empty( $probe ) ) {
+			echo '<p>' . esc_html__( 'Nothing to ask about yet: no project names a mirror folder, and no groups exist.', 'ans-singers-portal' ) . '</p>';
 			return;
 		}
 
-		echo '<table class="widefat striped" style="max-width:44em;"><thead><tr><th>' .
-			esc_html__( 'Group', 'ans-singers-portal' ) . '</th><th>' .
-			esc_html__( 'Published scores', 'ans-singers-portal' ) . '</th><th>' .
-			esc_html__( 'Projects seen', 'ans-singers-portal' ) . '</th></tr></thead><tbody>';
+		echo '<table class="widefat striped" style="max-width:52em;"><thead><tr><th>' .
+			esc_html__( 'Group asked for', 'ans-singers-portal' ) . '</th><th>' .
+			esc_html__( 'Scores', 'ans-singers-portal' ) . '</th><th>' .
+			esc_html__( 'Paste one of these into a project', 'ans-singers-portal' ) . '</th></tr></thead><tbody>';
 
-		foreach ( $groups as $group ) {
-			$scores   = self::library( $group->slug );
+		$total = 0;
+		foreach ( $probe as $group ) {
+			$scores   = static::library( $group );
+			$total   += count( $scores );
 			$projects = array();
 			foreach ( $scores as $score ) {
-				if ( ! empty( $score['project'] ) ) {
-					$projects[ (string) $score['project'] ] = true;
+				if ( empty( $score['project'] ) ) {
+					continue;
 				}
+				$path = $group . '/' . (string) $score['project'];
+				if ( ! isset( $projects[ $path ] ) ) {
+					$projects[ $path ] = 0;
+				}
+				$projects[ $path ]++;
+			}
+			$cells = array();
+			foreach ( $projects as $path => $n ) {
+				$cells[] = '<code>' . esc_html( $path ) . '</code> (' . esc_html( (string) $n ) . ')';
 			}
 			printf(
 				'<tr><td><code>%s</code></td><td>%s</td><td>%s</td></tr>',
-				esc_html( $group->slug ),
+				esc_html( $group ),
 				esc_html( (string) count( $scores ) ),
-				esc_html( $projects ? implode( ', ', array_keys( $projects ) ) : '—' )
+				$cells ? implode( '<br />', $cells ) : esc_html( '—' )
 			);
 		}
 		echo '</tbody></table>';
-		echo '<p class="description">' . esc_html__( 'A group with zero scores is not necessarily broken — it may simply have nothing published. A group whose project names do not match any WordPress project will show scores here and nothing on the singer-facing page.', 'ans-singers-portal' ) . '</p>';
+
+		if ( ! $total ) {
+			echo '<p class="description" style="color:#b32d2e;">' .
+				esc_html__( 'Every name came back empty. That is what a name mismatch looks like: the worker answers fine and has nothing filed under any of these. The group id is whatever label was passed when the folder was scanned, not the WordPress group name, and nothing forces the two to agree.', 'ans-singers-portal' ) .
+				'</p>';
+		}
+		echo '<p class="description">' .
+			esc_html__( 'These are the names this site knows to ask about: every mirror folder already named on a project, plus every WordPress group slug as a guess. The worker has no endpoint that lists its groups, so a folder nobody has named here cannot appear in this table.', 'ans-singers-portal' ) .
+			'</p>';
+	}
+
+	/**
+	 * Mirror group ids already named on a project, so the check can ask about them.
+	 *
+	 * @return string[]
+	 */
+	protected static function configured_mirror_groups() {
+		$rows = get_posts(
+			array(
+				'post_type'        => 'ans_project',
+				'post_status'      => 'any',
+				'numberposts'      => 200,
+				'fields'           => 'ids',
+				'meta_key'         => self::META_PROJECT,
+				'suppress_filters' => false,
+			)
+		);
+		if ( ! is_array( $rows ) ) {
+			return array();
+		}
+		$groups = array();
+		foreach ( $rows as $id ) {
+			$value = trim( (string) get_post_meta( (int) $id, self::META_PROJECT, true ) );
+			if ( '' === $value || false === strpos( $value, '/' ) ) {
+				continue;
+			}
+			$parts = explode( '/', $value, 2 );
+			$group = static::clean_group( $parts[0] );
+			if ( '' !== $group ) {
+				$groups[] = $group;
+			}
+		}
+		return array_values( array_unique( $groups ) );
 	}
 
 	/* -------------------------------------------------------------------

@@ -4,7 +4,7 @@ Tags: members, portal, choir, private, materials
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.14.0
+Stable tag: 1.15.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -70,6 +70,15 @@ Deactivation removes nothing. Uninstall also keeps everything by default; define
 Since 1.2.0 there are no per-material grants: any logged-in portal member sees every material in a project they can access. Give the guest a portal account (Roster → Send portal invite) and, if the project is group-tagged, add them to that group (e.g. Special Guests).
 
 == Changelog ==
+
+= 1.15.0 =
+* **Published sheet music reaches singers.** The device-sync worker has been publishing scores into the private mirror under frozen filenames since Phase 1, and until now not one singer could reach them. Scores published for a project's groups now appear in that project's materials list alongside the hand-entered rows, under the same piece headings, with the same Open and Download buttons.
+* Scores are merged at render time and are never written into the project's materials. The mirror stays the single source of truth: there is no second copy to drift, nothing to re-sync, and removing a score from the mirror removes it from the page without an admin touching anything.
+* **It fails open.** Unconfigured, unreachable, slow, or a malformed response - every path returns the materials list exactly as it arrived. Nothing this feature does can remove music a singer already had, which matters when the page is being opened in a rehearsal room.
+* The worker token never reaches the browser. All calls are made server-side and what lands on the page is a short-lived signed URL per score, which carries no credential. The token is read from a wp-config constant first, so on a properly configured site it need not be in the database at all.
+* Scores match a project by name, compared case-insensitively with whitespace collapsed, and can be overridden per project by a field on the project edit screen for the cases where the folder and the project were never named the same thing. A project with an empty key matches nothing on purpose - showing a singer no mirror scores is always better than showing them another project's music.
+* Group gating is unchanged. These rows carry no groups of their own; they were already scoped by the project's groups before they arrived, and the new filter is documented as never widening access. A work published to two groups a singer holds appears once.
+* **Singers Portal -> Sheet-Music Mirror** holds the worker URL and token, and runs a live connection check that reports, per group, how many scores the worker returns and which project names it saw. "Saved" tells an admin nothing about whether singers will see anything; this tells them.
 
 = 1.14.0 =
 * **Materials are a list, not a gallery.** Every inline preview is gone — the Google Drive/Docs iframe, the video embed, the audio player and the inline image. A project's materials are now one compact row each: the title leads, and the content type, tags and the Open/Download buttons share the bottom line — buttons left, type and tags right-justified. Twelve materials used to run several screens deep because four of them rendered as 460–940px iframes; they now fit on one screen, which is what a singer opened the page for.

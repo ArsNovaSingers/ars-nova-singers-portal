@@ -4,7 +4,7 @@ Tags: members, portal, choir, private, materials
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.20.1
+Stable tag: 1.21.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -70,6 +70,12 @@ Deactivation removes nothing. Uninstall also keeps everything by default; define
 Since 1.2.0 there are no per-material grants: any logged-in portal member sees every material in a project they can access. Give the guest a portal account (Roster → Send portal invite) and, if the project is group-tagged, add them to that group (e.g. Special Guests).
 
 == Changelog ==
+
+= 1.21.0 =
+* **One title at the top of the portal instead of two.** The WordPress page was called "Singers Portal" and the portal printed its own heading saying the same thing, so the first screen — the part a singer sees before scrolling — was largely spent saying it twice.
+* The theme's page title is now hidden on `/portal/` and the portal's own heading is the page's title, reading **"Ars Nova Portal"**. It is a real `<h1>` now rather than an `<h2>`, and it is sized as a working page's heading rather than a hero, so the space the duplicate was taking goes back to the music.
+* Board members still get "Board Portal" on the same page, and the `ansp_portal_name` filter still overrides it — one page, several audiences, which is why this stayed a variable.
+* ⚠️ **Upgrading elsewhere needs one setting.** The hidden page title is a per-page Kadence setting, not something the plugin does. On any site where `/portal/` still shows its page title, set that page's title to hidden — otherwise this version shows the old duplicate with a new name.
 
 = 1.20.1 =
 * **The player is roughly twice as wide.** Moving it beside the title in 1.20.0 shrank it to 17rem, which traded away the thing it is for: the scrubber is the control's width minus its buttons, so width *is* seeking resolution. On a six-minute movement 17rem is about 1.4 seconds per pixel — finding one phrase is a guess. It now runs from 24rem on a small laptop up to 38rem on a wide screen, around 600px at 1440, and the drag lands where you aim it.

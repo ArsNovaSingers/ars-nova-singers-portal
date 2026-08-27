@@ -47,22 +47,27 @@ $ansp_tabs = array(
  * shared with everyone rather than an empty portal.
  */
 /*
- * Which portal this is.
+ * Which portal this is — and, since 1.21.0, the ONLY heading on the page.
  *
- * One site, one /portal/ page, several audiences. The WordPress page title
- * above says "Ars Nova Portal" — the house — and this line says which room
- * you are in. Saying "Singers Portal" in both places was just an echo.
+ * The WordPress page was titled "Singers Portal" and this line said the same
+ * thing, so the top of the page spent two headings and most of the first
+ * screen saying it twice. The theme's page title is now hidden on /portal/
+ * (Kadence per-page `_kad_post_title` = `hide`, set on that page alone) and
+ * this is what a singer reads.
  *
- * Board members get their own name here and their own tab set via the
- * ansp_portal_tabs filter, rather than a second page to maintain.
+ * That is why the default is the organisation's name rather than the
+ * audience's: it is the page's title now, not a subtitle under one. Board
+ * members still get their own name here, and their own tab set via the
+ * ansp_portal_tabs filter, rather than a second page to maintain — which is
+ * the reason this stays a variable instead of becoming static markup.
  */
-$ansp_portal_name = __( 'Singers Portal', 'ans-singers-portal' );
+$ansp_portal_name = __( 'Ars Nova Portal', 'ans-singers-portal' );
 if ( in_array( 'ans_board', (array) $ansp_user->roles, true ) ) {
 	$ansp_portal_name = __( 'Board Portal', 'ans-singers-portal' );
 }
 
 /**
- * Filter the portal's audience name, shown under the page title.
+ * Filter the portal's heading — the page's only title.
  *
  * @param string  $ansp_portal_name Portal name.
  * @param WP_User $ansp_user        Current user.
@@ -89,7 +94,19 @@ $ansp_tabs = apply_filters( 'ansp_portal_tabs', $ansp_tabs );
 <div class="ansp-portal" id="ansp-portal">
 
 	<header class="ansp-portal-header">
-		<h2 class="ansp-portal-title"><?php echo esc_html( $ansp_portal_name ); ?></h2>
+		<?php
+		/*
+		 * <h1>, not <h2>. With the theme's page title hidden this is the only
+		 * heading on the page, and a page whose top-level heading is an <h2>
+		 * reads to a screen reader as a document that starts mid-outline.
+		 *
+		 * ⚠️ This is coupled to the Kadence per-page setting. Installing this
+		 * plugin version somewhere the page title is still shown gives you two
+		 * <h1>s and the duplicate title back. When this reaches LIVE, set
+		 * `_kad_post_title` to `hide` on the /portal/ page there too.
+		 */
+		?>
+		<h1 class="ansp-portal-title"><?php echo esc_html( $ansp_portal_name ); ?></h1>
 		<p class="ansp-portal-welcome">
 			<?php
 			/* translators: %s: user display name */

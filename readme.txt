@@ -4,7 +4,7 @@ Tags: members, portal, choir, private, materials
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.15.0
+Stable tag: 1.15.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -70,6 +70,13 @@ Deactivation removes nothing. Uninstall also keeps everything by default; define
 Since 1.2.0 there are no per-material grants: any logged-in portal member sees every material in a project they can access. Give the guest a portal account (Roster → Send portal invite) and, if the project is group-tagged, add them to that group (e.g. Special Guests).
 
 == Changelog ==
+
+= 1.15.1 =
+* **Fixes 1.15.0, which could not find anything.** The mirror stores two coordinates - published objects live at `scores/<group>/<project>/<file>` - and 1.15.0 could only be told about one of them. It derived the group from the WordPress group slug, which is wrong by construction: the group id is free text handed to the sync worker when a folder is first scanned, and the worker compares it exactly. Chamber Singers is `cs` in WordPress and `chamber-singers` in the mirror, so every lookup returned nothing, logged nothing and showed nothing.
+* One field on the project now carries the whole address. Enter `chamber-singers/26-27 CS` to name both halves; enter `26-27 CS` to name only the project and let the group come from the project's own groups; leave it empty and the project title is used, which is a guess and should be expected to be wrong more often than right. The two systems were named by different people for different reasons and nothing obliges them to agree.
+* A second, latent bug went with it: the group was being run through WordPress's slugifier before being sent. A group scanned as "Full Group" would have been asked for as "full-group" and matched nothing, in exactly the same silence, the first time anyone published for an ensemble other than Chamber. The group is now sent verbatim; only characters that would break the URL path or let a value escape its own folder are removed.
+* **Singers Portal -> Sheet-Music Mirror** now prints the actual `group/project` strings the worker holds, with a count for each, so setting up a project is copy-and-paste rather than spelling from memory. It asks about every mirror folder already named on a project as well as every WordPress group. When every name comes back empty it says so and explains what that means, because a column of zeroes on its own is not a diagnosis.
+* The screen is also honest about its limit: the worker has no endpoint that lists its groups, so a folder nobody has named in WordPress cannot appear in that table.
 
 = 1.15.0 =
 * **Published sheet music reaches singers.** The device-sync worker has been publishing scores into the private mirror under frozen filenames since Phase 1, and until now not one singer could reach them. Scores published for a project's groups now appear in that project's materials list alongside the hand-entered rows, under the same piece headings, with the same Open and Download buttons.

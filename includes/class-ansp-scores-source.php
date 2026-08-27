@@ -76,13 +76,24 @@ class ANSP_Scores_Source {
 	 * How long a group's library is cached.
 	 *
 	 * Short on purpose. The signed URLs inside the response expire in 15 minutes,
-	 * so caching for longer than that would hand singers dead links. Ten minutes
-	 * leaves headroom for a page sitting open briefly before a click.
+	 * so caching for longer than that would hand singers dead links.
+	 *
+	 * That reasoning was right and its conclusion was wrong. This comment used to
+	 * say ten minutes "leaves headroom for a page sitting open briefly before a
+	 * click". A page does not sit open briefly. On 2026-08-27 a real click
+	 * produced GCS's ExpiredToken XML, because the signed URL was in the href and
+	 * the href outlived it. Signed URLs no longer reach the browser at all - see
+	 * score_link() - so this now only bounds how stale a URL consumed SERVER-side
+	 * can be, and five minutes leaves ten of the fifteen.
 	 */
-	const CACHE_MINUTES = 10;
+	const CACHE_MINUTES = 5;
 
 	/** Seconds before a worker call is abandoned. A slow score list must not hang the page. */
 	const TIMEOUT       = 8;
+
+	/** Query vars on the durable, never-expiring score link. */
+	const QUERY_WORK    = 'ans_score';
+	const QUERY_PROJECT = 'ans_score_project';
 
 	/**
 	 * Hook up.
@@ -93,6 +104,10 @@ class ANSP_Scores_Source {
 		add_action( 'save_post_' . ANSP_CPT::POST_TYPE, array( __CLASS__, 'save_meta' ), 10, 2 );
 		add_action( 'admin_menu', array( __CLASS__, 'add_settings_page' ) );
 		add_action( 'admin_init', array( __CLASS__, 'register_settings' ) );
+
+		// The durable link, and the reason a mirror score can be downloaded at all.
+		add_action( 'template_redirect', array( __CLASS__, 'handle_score_link' ) );
+		add_filter( 'ansp_zip_source', array( __CLASS__, 'zip_source' ), 10, 2 );
 	}
 
 	/* -------------------------------------------------------------------
@@ -157,7 +172,7 @@ class ANSP_Scores_Source {
 	 * @param string $group_slug The worker's group id, VERBATIM. Not a WP slug - see clean_group().
 	 * @return array[]
 	 */
-	public static function library( $group_slug ) {
+	public static function library( $group_slug, $fresh = false ) {
 		$group_slug = static::clean_group( $group_slug );
 		if ( '' === $group_slug || ! self::is_configured() ) {
 			return array();
@@ -166,7 +181,7 @@ class ANSP_Scores_Source {
 		$cache_key = 'ansp_scores_lib_' . md5(
 			self::worker_url() . '|' . $group_slug . '|' . (string) get_option( self::OPT_CACHE_BUST, '0' )
 		);
-		$cached    = get_transient( $cache_key );
+		$cached    = $fresh ? false : get_transient( $cache_key );
 		if ( is_array( $cached ) ) {
 			return $cached;
 		}
@@ -258,7 +273,7 @@ class ANSP_Scores_Source {
 					continue;
 				}
 				$seen[ $score['work_id'] ] = true;
-				$added[]                   = self::to_material_row( $score, $group_slug );
+				$added[]                   = self::to_material_row( $score, $group_slug, $project_id );
 			}
 		}
 
@@ -429,7 +444,7 @@ class ANSP_Scores_Source {
 	 * @param string $group_slug The group whose library it came from.
 	 * @return array
 	 */
-	protected static function to_material_row( $score, $group_slug ) {
+	protected static function to_material_row( $score, $group_slug, $project_id = 0 ) {
 		$canonical = isset( $score['canonical'] ) ? (string) $score['canonical'] : '';
 		$pages     = isset( $score['pages'] ) ? (int) $score['pages'] : 0;
 		$version   = isset( $score['version'] ) ? (int) $score['version'] : 1;
@@ -457,7 +472,10 @@ class ANSP_Scores_Source {
 			'id'     => self::ID_PREFIX . ( isset( $score['work_id'] ) ? sanitize_key( $score['work_id'] ) : '' ),
 			'type'   => 'sheet_music',
 			'title'  => $canonical,
-			'url'    => isset( $score['url'] ) ? (string) $score['url'] : '',
+			'url'    => self::score_link(
+				isset( $score['work_id'] ) ? (string) $score['work_id'] : '',
+				(int) $project_id
+			),
 			'note'   => $note,
 			'piece'  => $canonical,
 			'tags'   => $revised ? array( __( 'Updated', 'ans-singers-portal' ) ) : array(),
@@ -756,6 +774,201 @@ class ANSP_Scores_Source {
 			}
 		}
 		return array_values( array_unique( $groups ) );
+	}
+
+	/* -------------------------------------------------------------------
+	 * The durable link
+	 * ---------------------------------------------------------------- */
+
+	/**
+	 * A link to a published score that does not expire.
+	 *
+	 * v1.15.0 put the worker's signed GCS URL straight into the row's href. The
+	 * worker signs for fifteen minutes; a page sits open for as long as a singer
+	 * leaves it open. On 2026-08-27 a click returned GCS's ExpiredToken XML - not
+	 * an edge case, the ordinary case of reading a page and clicking later.
+	 *
+	 * A signed URL is a credential with an expiry date, and an href outlives it.
+	 * So the href is now an ordinary link on this site carrying only two public
+	 * identifiers, and the credential is minted at the moment of the click. Three
+	 * things follow, and all of them are improvements rather than costs:
+	 *
+	 * - The link never goes stale. Bookmark it, mail it, come back tomorrow.
+	 * - Permission is checked when it is USED rather than when it was drawn.
+	 *   Today's rendered href is a bearer token: anyone holding it gets the file
+	 *   for fifteen minutes, logged in or not. This one is checked every time.
+	 * - It is on this host, so ANSP_Materials_Zip stops calling it "a link, not a
+	 *   file" and the Download button and bulk-zip checkbox come back.
+	 *
+	 * @param string $work_id    Worker work id.
+	 * @param int    $project_id Project the singer is looking at.
+	 * @return string '' when either half is missing, which renders as "No link yet".
+	 */
+	public static function score_link( $work_id, $project_id ) {
+		$work_id    = sanitize_key( (string) $work_id );
+		$project_id = (int) $project_id;
+		if ( '' === $work_id || ! $project_id ) {
+			return '';
+		}
+		return add_query_arg(
+			array(
+				self::QUERY_WORK    => $work_id,
+				self::QUERY_PROJECT => $project_id,
+			),
+			home_url( '/' )
+		);
+	}
+
+	/**
+	 * Turn a score link back into its two identifiers.
+	 *
+	 * @param string $url Any URL.
+	 * @return array|null array( 'work' => string, 'project' => int ) or null.
+	 */
+	protected static function link_parts( $url ) {
+		$query = (string) wp_parse_url( (string) $url, PHP_URL_QUERY );
+		if ( '' === $query ) {
+			return null;
+		}
+		$args = array();
+		wp_parse_str( $query, $args );
+		if ( empty( $args[ self::QUERY_WORK ] ) || empty( $args[ self::QUERY_PROJECT ] ) ) {
+			return null;
+		}
+		return array(
+			'work'    => sanitize_key( (string) $args[ self::QUERY_WORK ] ),
+			'project' => (int) $args[ self::QUERY_PROJECT ],
+		);
+	}
+
+	/**
+	 * The signed URL for one work, as the worker reports it right now.
+	 *
+	 * @param string $work_id    Worker work id, already sanitised.
+	 * @param int    $project_id Project, which decides which groups to ask.
+	 * @param bool   $fresh      Bypass the cache. True on a click, false server-side.
+	 * @return string '' when the work is not in any of this project's groups.
+	 */
+	protected static function signed_url_for( $work_id, $project_id, $fresh ) {
+		$target = static::mirror_target( (int) $project_id );
+		foreach ( $target['groups'] as $group ) {
+			foreach ( static::library( $group, $fresh ) as $score ) {
+				if ( empty( $score['work_id'] ) || empty( $score['url'] ) ) {
+					continue;
+				}
+				if ( sanitize_key( (string) $score['work_id'] ) !== $work_id ) {
+					continue;
+				}
+				if ( ! static::score_belongs_to_project( $score, $target['project'] ) ) {
+					continue;
+				}
+				return (string) $score['url'];
+			}
+		}
+		return '';
+	}
+
+	/**
+	 * Serve a score link: check, mint, redirect.
+	 *
+	 * Permission is not re-implemented here. It asks the permission engine for the
+	 * materials this user can see on this project and looks for the row - so a
+	 * singer can reach exactly what the page would have shown them, and the two
+	 * can never drift apart, because they are the same call.
+	 *
+	 * Nothing about this response may be cached. A 302 to a fifteen-minute URL,
+	 * held by a proxy or a browser, would reintroduce the exact bug this replaces.
+	 */
+	public static function handle_score_link() {
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- a durable read-only link, deliberately not nonced.
+		if ( empty( $_GET[ self::QUERY_WORK ] ) ) {
+			return;
+		}
+		$work    = sanitize_key( wp_unslash( $_GET[ self::QUERY_WORK ] ) );
+		$project = isset( $_GET[ self::QUERY_PROJECT ] ) ? absint( wp_unslash( $_GET[ self::QUERY_PROJECT ] ) ) : 0;
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
+
+		if ( '' === $work || ! $project ) {
+			wp_die(
+				esc_html__( 'That sheet-music link is incomplete.', 'ans-singers-portal' ),
+				esc_html__( 'Sheet music', 'ans-singers-portal' ),
+				array( 'response' => 400 )
+			);
+		}
+
+		if ( ! is_user_logged_in() ) {
+			wp_safe_redirect( wp_login_url( self::score_link( $work, $project ) ) );
+			exit;
+		}
+
+		$row_id  = self::ID_PREFIX . $work;
+		$visible = ANSP_Permissions::get_visible_materials( $project, get_current_user_id() );
+		$allowed = false;
+		foreach ( (array) $visible as $row ) {
+			if ( isset( $row['id'] ) && $row_id === $row['id'] ) {
+				$allowed = true;
+				break;
+			}
+		}
+		if ( ! $allowed ) {
+			wp_die(
+				esc_html__( 'This score is not part of a project you have access to. If you think it should be, ask the office rather than reloading - the link itself is fine.', 'ans-singers-portal' ),
+				esc_html__( 'Sheet music', 'ans-singers-portal' ),
+				array( 'response' => 403 )
+			);
+		}
+
+		$signed = self::signed_url_for( $work, $project, true );
+		if ( '' === $signed ) {
+			self::log( 'score link resolved no URL for work ' . $work . ' on project ' . $project );
+			wp_die(
+				esc_html__( 'That score could not be reached just now. Nothing has been removed - try again in a moment, and tell the office if it keeps happening.', 'ans-singers-portal' ),
+				esc_html__( 'Sheet music', 'ans-singers-portal' ),
+				array( 'response' => 503 )
+			);
+		}
+
+		nocache_headers();
+		header( 'Cache-Control: private, no-store, max-age=0' );
+		wp_redirect( $signed, 302 ); // phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect -- deliberately off-site: this is the mirror.
+		exit;
+	}
+
+	/**
+	 * Teach the zip builder what a score link is.
+	 *
+	 * ANSP_Materials_Zip::resolve_source() understands Drive links and files on
+	 * this host; a score link is neither, and without this it would be classed as
+	 * "a link, not a file" - no Download button, no checkbox, no bulk zip.
+	 *
+	 * It deliberately does NOT hand back the score link itself. That would make
+	 * the site fetch its own endpoint over HTTP mid-request, which can deadlock a
+	 * single-worker PHP server. It returns the mirror URL, so the zip builder
+	 * talks to storage directly.
+	 *
+	 * The cache is NOT bypassed here. This runs server-side and the bytes are
+	 * fetched within the same request, so a URL up to CACHE_MINUTES old still has
+	 * ten of its fifteen minutes left. The click path is the one that must be
+	 * fresh, because a human decides when that happens.
+	 *
+	 * Permission is already settled before this runs: both download handlers
+	 * re-derive the caller's visible set through the permission engine and
+	 * intersect. This answers "what is it", never "who may have it".
+	 *
+	 * @param array|null $resolved What resolve_source() decided on its own.
+	 * @param string     $url      The material's URL.
+	 * @return array|null
+	 */
+	public static function zip_source( $resolved, $url ) {
+		if ( null !== $resolved ) {
+			return $resolved;
+		}
+		$parts = self::link_parts( $url );
+		if ( null === $parts ) {
+			return $resolved;
+		}
+		$signed = self::signed_url_for( $parts['work'], $parts['project'], false );
+		return '' === $signed ? null : array( 'kind' => 'url', 'url' => $signed );
 	}
 
 	/* -------------------------------------------------------------------

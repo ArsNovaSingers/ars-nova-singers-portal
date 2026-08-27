@@ -140,7 +140,18 @@ class ANSP_Materials_Zip {
 			return array( 'kind' => 'url', 'url' => $url );
 		}
 
-		return null;
+		/**
+		 * Not a shape this class knows. Ask, rather than deciding alone.
+		 *
+		 * Sheet music published to the device-sync mirror is a file in every
+		 * sense and lives on neither Drive nor this host, so without this hook it
+		 * was classed as a link and singers were shown a dash reading "this is a
+		 * link, not a file" over their own scores.
+		 *
+		 * @param array|null $source array('kind'=>'drive'|'url', ...) or null.
+		 * @param string     $url    The material URL that was not recognised.
+		 */
+		return apply_filters( 'ansp_zip_source', null, $url );
 	}
 
 	/**

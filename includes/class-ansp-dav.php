@@ -27,8 +27,8 @@
  * one from the other. The mirror address is already stated per project - that
  * is what ANSP_Scores_Source::mirror_target() reads - and a tab's WebDAV
  * folder is whatever its own projects say it is. If a tab's projects disagree,
- * the panel points at the root of the tree and lets the credential decide what
- * is visible, which is true rather than clever.
+ * or name no folder at all, no panel appears: see panel_for() for why guessing
+ * there is the one thing this must not do.
  *
  * @package ArsNovaSingersPortal
  */
@@ -270,36 +270,36 @@ class ANSP_Dav {
 			return null;
 		}
 
-		$groups = self::groups_for_projects( $projects );
-
 		/*
-		 * One group: point at its folder. More than one, or none identified:
-		 * point at the root and let the credential decide what is listed. The
-		 * server already refuses a group the credential does not carry, so the
-		 * root is never an over-share — it is just less specific.
+		 * Exactly one identified group, holding its own username, or nothing.
+		 *
+		 * An earlier cut of this was looser: a tab whose projects named no
+		 * mirror folder, or named two, fell back to the root of the tree, and
+		 * a group with no username of its own borrowed the only configured
+		 * credential. Both looked reasonable and both were wrong the moment
+		 * they met the real data — the Ars Nova Singers tab holds projects in
+		 * `ensemble-singers` and `main`, so it would have printed a Chamber
+		 * Singers username to the full choir. Advertising one group's
+		 * credential on another group's page is the one mistake this panel
+		 * must not make, and the guard against it is refusing to guess.
+		 *
+		 * The cost is that a tab spanning two mirror folders shows no panel
+		 * at all. That is the honest answer: WebDAV serves one folder per
+		 * credential, so there is no single address that tab could give.
 		 */
-		if ( 1 === count( $groups ) ) {
-			$group = $groups[0];
-			$url   = self::url_for_group( $group );
-		} else {
-			$group = '';
-			$url   = trailingslashit( $base );
+		$groups = self::groups_for_projects( $projects );
+		if ( 1 !== count( $groups ) ) {
+			return null;
 		}
 
-		$username = '' !== $group ? self::username_for_group( $group ) : '';
-		if ( '' === $username ) {
-			// Fall back to a single configured credential when there is only
-			// one, which is the shape of the pilot.
-			if ( 1 === count( $settings['users'] ) ) {
-				$username = (string) reset( $settings['users'] );
-			}
-		}
+		$group    = $groups[0];
+		$username = self::username_for_group( $group );
 		if ( '' === $username ) {
 			return null;
 		}
 
 		return array(
-			'url'      => $url,
+			'url'      => self::url_for_group( $group ),
 			'group'    => $group,
 			'username' => $username,
 			'note'     => $settings['note'],

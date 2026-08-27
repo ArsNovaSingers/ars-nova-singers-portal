@@ -37,6 +37,81 @@
 .ansp-portal-welcome { margin: 0; font-size: 0.95em; opacity: 0.85; }
 .ansp-logout { margin-left: 0.75em; }
 
+/* ---------- WebDAV panel ---------- */
+/*
+ * Quiet on purpose. This is the power-user route: valuable to the handful of
+ * singers who want the whole season on a tablet in one action, noise to
+ * everyone else. Collapsed, below the music, styled as an aside rather than
+ * a call to action.
+ */
+.ansp-dav {
+	margin: 1.25rem 0 0;
+	border: 1px solid var(--ansp-border);
+	border-radius: var(--ansp-radius);
+	background: #fbfcfe;
+}
+.ansp-dav-summary {
+	cursor: pointer;
+	padding: 0.6rem 0.9rem;
+	font-size: 0.9em;
+	font-weight: 600;
+	list-style: none;
+	display: flex;
+	align-items: center;
+	gap: 0.45rem;
+}
+.ansp-dav-summary::-webkit-details-marker { display: none; }
+.ansp-dav-summary::before {
+	content: "\25B8";
+	display: inline-block;
+	transition: transform 0.12s ease;
+}
+.ansp-dav[open] > .ansp-dav-summary::before { transform: rotate( 90deg ); }
+.ansp-dav-body {
+	padding: 0 0.9rem 0.9rem;
+	font-size: 0.92em;
+}
+.ansp-dav-lead { margin: 0 0 0.75rem; }
+.ansp-dav-fields {
+	margin: 0 0 0.75rem;
+	display: grid;
+	grid-template-columns: auto minmax( 0, 1fr );
+	gap: 0.35rem 0.85rem;
+	align-items: baseline;
+}
+.ansp-dav-fields dt {
+	font-weight: 600;
+	white-space: nowrap;
+}
+.ansp-dav-fields dd {
+	margin: 0;
+	min-width: 0;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.4rem;
+}
+/*
+ * overflow-wrap, not a truncation: a singer has to be able to read and copy
+ * the whole address. An ellipsis would hide the part that is wrong when
+ * something does not connect.
+ */
+.ansp-dav-value {
+	overflow-wrap: anywhere;
+	font-size: 0.95em;
+	background: #eef2f8;
+	border-radius: 4px;
+	padding: 0.15rem 0.35rem;
+}
+.ansp-dav-muted { opacity: 0.75; margin: 0.5rem 0 0; }
+.ansp-dav-note { margin: 0.5rem 0 0; }
+
+@media (max-width: 680px) {
+	/* Labels above values — two columns leaves nothing for a long URL. */
+	.ansp-dav-fields { grid-template-columns: minmax( 0, 1fr ); gap: 0.15rem; }
+	.ansp-dav-fields dd { margin-bottom: 0.5rem; }
+}
+
 /* ---------- Notices ---------- */
 .ansp-notice {
 	padding: 0.75rem 1rem;

@@ -59,6 +59,16 @@ class ANSP_Scores_Source {
 	/** Per-project meta naming the worker-side project this WP project maps to. */
 	const META_PROJECT  = 'ansp_scores_project';
 
+	/**
+	 * Bumped whenever the worker URL or token changes.
+	 *
+	 * Library answers are cached per URL and group. Without this, changing the
+	 * token leaves ten minutes of answers fetched with the old one - which reads
+	 * as "the fix did not work" and is the sort of thing that gets a correct fix
+	 * reverted.
+	 */
+	const OPT_CACHE_BUST = 'ansp_scores_cache_bust';
+
 	/** Rows are prefixed so they are traceable and can never collide with a uniqid(). */
 	const ID_PREFIX     = 'ansp_score_';
 
@@ -121,6 +131,17 @@ class ANSP_Scores_Source {
 		return '' !== self::worker_url() && '' !== self::worker_token();
 	}
 
+	/**
+	 * Make every cached library answer stale, immediately.
+	 *
+	 * Called after the URL or token changes. Transients cannot be deleted by
+	 * wildcard without touching the database directly, so the key carries a
+	 * version instead and this moves it.
+	 */
+	public static function bust_cache() {
+		update_option( self::OPT_CACHE_BUST, (string) time() );
+	}
+
 	/* -------------------------------------------------------------------
 	 * Fetching
 	 * ---------------------------------------------------------------- */
@@ -142,7 +163,9 @@ class ANSP_Scores_Source {
 			return array();
 		}
 
-		$cache_key = 'ansp_scores_lib_' . md5( self::worker_url() . '|' . $group_slug );
+		$cache_key = 'ansp_scores_lib_' . md5(
+			self::worker_url() . '|' . $group_slug . '|' . (string) get_option( self::OPT_CACHE_BUST, '0' )
+		);
 		$cached    = get_transient( $cache_key );
 		if ( is_array( $cached ) ) {
 			return $cached;
@@ -347,7 +370,7 @@ class ANSP_Scores_Source {
 	 * @param string $wanted_project The project key we are rendering.
 	 * @return bool
 	 */
-	protected static function score_belongs_to_project( $score, $wanted_project ) {
+	public static function score_belongs_to_project( $score, $wanted_project ) {
 		$wanted = self::normalise( $wanted_project );
 		if ( '' === $wanted ) {
 			return false;
@@ -706,7 +729,7 @@ class ANSP_Scores_Source {
 	 *
 	 * @return string[]
 	 */
-	protected static function configured_mirror_groups() {
+	public static function configured_mirror_groups() {
 		$rows = get_posts(
 			array(
 				'post_type'        => 'ans_project',

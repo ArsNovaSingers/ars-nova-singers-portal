@@ -4,7 +4,7 @@ Tags: members, portal, choir, private, materials
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.16.0
+Stable tag: 1.17.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -70,6 +70,13 @@ Deactivation removes nothing. Uninstall also keeps everything by default; define
 Since 1.2.0 there are no per-material grants: any logged-in portal member sees every material in a project they can access. Give the guest a portal account (Roster → Send portal invite) and, if the project is group-tagged, add them to that group (e.g. Special Guests).
 
 == Changelog ==
+
+= 1.17.0 =
+* **Sheet-music links no longer expire — and this fixes a real failure, not a theoretical one.** Clicking Open on a score returned a page of raw XML reading "the provided token has expired". The mirror signs each file's address for fifteen minutes; the page held that address in the link and then sat open in a tab while the clock ran. A singer opens the Hub, reads the rehearsal note, makes a cup of tea, clicks — that is the ordinary way anyone uses a web page, and it failed.
+* The link on each score is now an ordinary link on this site that never goes stale. Bookmark it, email it, come back tomorrow. The mirror's short-lived address is fetched at the moment of the click and never appears in the page at all.
+* **Access is now checked when a link is used rather than when the page was drawn.** The old links were, in effect, a key anyone holding them could use for fifteen minutes whether or not they were signed in. Every click is now checked against the same permissions the page itself uses — not a second copy of the rules that could drift from the first.
+* **Sheet music can be downloaded again.** Because the link lives on this site, scores are recognised as files rather than as web links: the Download button is back, and so are the tick-boxes that put them in a bulk .zip along with everything else on the project. The small dash whose tooltip described a singer's own sheet music as "a link, not a file" is gone with them.
+* If the mirror cannot be reached, a singer now gets a plain sentence saying so and that nothing has been removed, rather than a screen of XML.
 
 = 1.16.0 =
 * **The sheet-music mirror can be configured without opening wp-admin.** Every step needed to make published music appear was reachable only by a human at the WordPress admin screens, because the project post type is not exposed over REST and the mirror address is not a registered meta key - so the generic tools failed, and failed by reporting that the project did not exist. Three routes now cover it: the worker URL and token, one project's mirror address, and the whole mapping in a single call.

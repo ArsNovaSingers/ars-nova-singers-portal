@@ -4,7 +4,7 @@ Tags: members, portal, choir, private, materials
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.22.0
+Stable tag: 1.22.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -71,10 +71,14 @@ Since 1.2.0 there are no per-material grants: any logged-in portal member sees e
 
 == Changelog ==
 
+= 1.22.1 =
+* **A tab never advertises another group's credential.** 1.22.0 was looser than it should have been: a tab whose projects named no mirror folder, or named two, fell back to the root of the tree, and a group without its own username borrowed the only configured one. Against the real staging data that meant the **Ars Nova Singers tab — the full choir — would have shown a Chamber Singers username**, because its projects sit in `ensemble-singers` and `main` rather than in one folder.
+* The panel now appears only where the projects name exactly one mirror folder **and** that folder has a username of its own. Everywhere else it is absent. A tab spanning two folders genuinely has no single address to give, and saying nothing is the honest answer.
+
 = 1.22.0 =
 * **The WebDAV address is on the page.** Under each group's projects there is now a collapsed "Sync this music to your tablet" panel carrying the server address and username, with Copy buttons. A singer with a WebDAV-capable file app can mount the season's folder and pull every score in one action, then re-sync later and have only what changed come down.
 * **The password is deliberately not on the page.** The credential is shared per group today, and a shared secret printed into a page is a shared secret in every browser cache and every screenshot. The panel says so rather than leaving a blank.
-* **The panel points at the folder the projects actually name**, read from each project's mirror address — not derived from the WordPress group slug. Those are different names (`cs` here, `chamber-singers` in the mirror), and assuming they matched is what made 1.15.0 find nothing at all. Projects that disagree fall back to the root of the tree and let the credential decide what is listed.
+* **The panel points at the folder the projects actually name**, read from each project's mirror address — not derived from the WordPress group slug. Those are different names (`cs` here, `chamber-singers` in the mirror), and assuming they matched is what made 1.15.0 find nothing at all. (Projects that disagree fell back to the root of the tree in this version — corrected in 1.22.1, which shows nothing instead.)
 * **Nothing renders unless it would work.** No worker configured, switched off, or no username for the group, and the panel is absent rather than showing an address that cannot be logged into. Clearing a username removes the panel with it.
 * Configurable over REST at `ars-nova/v1 portal/dav` (GET/POST), like the mirror settings in 1.16.0 — no wp-admin needed. The read reports what a singer would actually see, not just what was set.
 * Collapsed and below the music on purpose. Nearly every singer taps a file and reads it; this is the route for the few who want the whole season on a tablet, and it should not be what anyone scrolls past to reach their part.

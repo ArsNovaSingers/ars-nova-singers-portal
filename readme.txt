@@ -4,7 +4,7 @@ Tags: members, portal, choir, private, materials
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.20.0
+Stable tag: 1.20.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -70,6 +70,11 @@ Deactivation removes nothing. Uninstall also keeps everything by default; define
 Since 1.2.0 there are no per-material grants: any logged-in portal member sees every material in a project they can access. Give the guest a portal account (Roster → Send portal invite) and, if the project is group-tagged, add them to that group (e.g. Special Guests).
 
 == Changelog ==
+
+= 1.20.1 =
+* **The player is roughly twice as wide.** Moving it beside the title in 1.20.0 shrank it to 17rem, which traded away the thing it is for: the scrubber is the control's width minus its buttons, so width *is* seeking resolution. On a six-minute movement 17rem is about 1.4 seconds per pixel — finding one phrase is a guess. It now runs from 24rem on a small laptop up to 38rem on a wide screen, around 600px at 1440, and the drag lands where you aim it.
+* It stacks under the title below 900px rather than 680px. A control this size beside a title would break the title into three-word lines, and a stacked player is **wider still** — nearly 800px on a 880px window — so nothing is given up by the change.
+* Row height is unchanged where the player sits beside the title.
 
 = 1.20.0 =
 * **The player can be scrubbed.** A recording used to start, run to the end of whatever the browser had buffered, and stop — and the progress bar could not be dragged at all. The endpoint was answering every request with the whole file from byte zero, and a browser that cannot ask for "the bytes around 4:12" cannot seek to 4:12. It now serves byte ranges, so the bar drags and a movement can be re-heard from the middle without reloading it.

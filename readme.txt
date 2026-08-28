@@ -4,7 +4,7 @@ Tags: members, portal, choir, private, materials
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.24.0
+Stable tag: 1.25.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -70,6 +70,14 @@ Deactivation removes nothing. Uninstall also keeps everything by default; define
 Since 1.2.0 there are no per-material grants: any logged-in portal member sees every material in a project they can access. Give the guest a portal account (Roster → Send portal invite) and, if the project is group-tagged, add them to that group (e.g. Special Guests).
 
 == Changelog ==
+
+= 1.25.0 =
+* **Venues are a record now, not a line you retype.** A venue has a name, a capacity, an address and access notes, and it lives under Singers Portal beside Projects. Six venues run the whole season and they were being typed out nineteen times, in seven different spellings - two of which may or may not be the same room at the Dairy.
+* **Capacity has somewhere to live for the first time.** Nothing in the site recorded how many seats a room holds, so nothing could ever say a performance was full. The number belongs to the room, not to the performance: the Dairy holds what the Dairy holds whether you play there once or four times.
+* **Anyone who can edit a Project can edit a Venue.** It reuses the same permissions rather than inventing new ones, so nobody had to have their access changed.
+* **The address is never public.** It is not shown on the venue list screen, and a venue has no public page. Addresses are for tickets and confirmations only.
+* Venues can also be read and written through the API, so a capacity can be filled in without opening wp-admin.
+* Nothing uses these records yet - projects still carry their own venue text. Connecting the two comes next.
 
 = 1.24.0 =
 * **Sheet music now has one panel on the project itself**, with the four steps in the order you do them: set the root folder, scan it, check the proposed names, add each piece. No separate destination, no matching rows up by name across two screens.

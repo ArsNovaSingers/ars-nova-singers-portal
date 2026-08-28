@@ -63,6 +63,7 @@ require_once ANSP_DIR . 'includes/class-ansp-mirror-rest.php';
 require_once ANSP_DIR . 'includes/class-ansp-dav.php';
 require_once ANSP_DIR . 'includes/class-ansp-sheet-music-box.php';
 require_once ANSP_DIR . 'includes/class-ansp-player.php';
+require_once ANSP_DIR . 'includes/class-ansp-venue.php';
 
 /**
  * Boot the plugin.
@@ -97,6 +98,7 @@ function ansp_init() {
 	ANSP_Mirror_Rest::init();  // REST routes so the mirror can be configured without wp-admin.
 	ANSP_Sheet_Music_Box::init();  // Set folder -> scan -> name -> add, on the project itself.
 	ANSP_Player::init();  // Inline playback for rehearsal recordings.
+	ANSP_Venue::init();  // Venues: capacity, address and access notes on a real record.
 	new ANSP_Project_Meta();
 	new ANSP_Profiles();
 	new ANSP_Login();

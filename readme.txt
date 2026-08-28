@@ -4,7 +4,7 @@ Tags: members, portal, choir, private, materials
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.25.0
+Stable tag: 1.26.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -70,6 +70,12 @@ Deactivation removes nothing. Uninstall also keeps everything by default; define
 Since 1.2.0 there are no per-material grants: any logged-in portal member sees every material in a project they can access. Give the guest a portal account (Roster → Send portal invite) and, if the project is group-tagged, add them to that group (e.g. Special Guests).
 
 == Changelog ==
+
+= 1.26.0 =
+* **Comp tickets per singer, set on the project.** A "Comp tickets" box on the project edit screen, where Kim says how many complimentary tickets each singer may claim for that project. 0 means none, and that is a real answer rather than an empty field.
+* This is the second of two ways a comp gets issued. The Comp Tickets screen handles one-offs - a donor, a reviewer, a guest of the composer, named one at a time. This one covers the whole choir at once.
+* **Singers cannot claim them yet.** The claim panel is not built, and the box says so on screen. Setting a number now is safe: it is the number the panel will read.
+* The number can also be read and set through the API, so it does not need wp-admin.
 
 = 1.25.0 =
 * **Venues are a record now, not a line you retype.** A venue has a name, a capacity, an address and access notes, and it lives under Singers Portal beside Projects. Six venues run the whole season and they were being typed out nineteen times, in seven different spellings - two of which may or may not be the same room at the Dairy.

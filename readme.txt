@@ -4,7 +4,7 @@ Tags: members, portal, choir, private, materials
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.23.0
+Stable tag: 1.24.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -70,6 +70,14 @@ Deactivation removes nothing. Uninstall also keeps everything by default; define
 Since 1.2.0 there are no per-material grants: any logged-in portal member sees every material in a project they can access. Give the guest a portal account (Roster → Send portal invite) and, if the project is group-tagged, add them to that group (e.g. Special Guests).
 
 == Changelog ==
+
+= 1.24.0 =
+* **Sheet music now has one panel on the project itself**, with the four steps in the order you do them: set the root folder, scan it, check the proposed names, add each piece. No separate destination, no matching rows up by name across two screens.
+* **"Set root folder" browses Google Drive** — click down through the folders — or takes a pasted folder address. Either way the folder is checked before it is saved, so a folder the service cannot see fails at the moment you choose it rather than later, disguised as "scanning is broken".
+* **A large file carries its warning on its own row**, with an Optimize button right there. That is the whole reason this replaced the separate "Smaller Files" screen: file size is something you notice about a file while adding it, not an errand you set out to run.
+* **Optimising now happens before the file is ever published**, so the small version is the one singers get from the start — no large version to download first, and no second version created purely to replace it.
+* Nothing publishes by itself. Scanning reads Drive and proposes. Optimising rewrites a staged file nobody can see. Only "Add this piece" makes anything visible, and it goes through the same publish path as before, keeping version history, rollback and the page-count gate.
+* **Removes the "Smaller Files" menu added in 1.23.0.** It was the wrong shape and lasted one release.
 
 = 1.23.0 =
 * **A "Smaller Files" screen, under Singers Portal.** Some sheet music is scanned in colour at far higher resolution than a tablet can show: it looks identical and the file is many times bigger. The worker can now produce a smaller copy and prove it still renders correctly — and this is where Tom says yes or no to each one. Measured on the real Chamber scores: 271 MB of sheet music becomes about 33 MB.

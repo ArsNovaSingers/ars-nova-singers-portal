@@ -3,7 +3,7 @@
  * Plugin Name:       Ars Nova Singers Portal
  * Plugin URI:        https://arsnovasingers.org/
  * Description:       Login-gated members portal for the Ars Nova Singers choir: seasons, projects, materials grouped under pieces with unlimited free-form tags, a singer-side tag filter and bulk .zip download, roster, calendars, announcements, RSVPs, front-end singer bios with Gemini "Compose with AI", and the absorbed "singer" directory (CPT, profile details, public bio pages). Sheet music published by the device-sync worker appears in a project's materials list under the same piece headings, merged at render time and never copied into the site. No ACF or other plugin dependencies.
- * Version:           1.23.0
+ * Version:           1.24.0
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Ars Nova Singers
@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
  * Constants
  * -------------------------------------------------------------------------
  */
-define( 'ANSP_VERSION', '1.23.0' );
+define( 'ANSP_VERSION', '1.24.0' );
 define( 'ANSP_FILE', __FILE__ );
 define( 'ANSP_DIR', plugin_dir_path( __FILE__ ) );
 define( 'ANSP_URL', plugin_dir_url( __FILE__ ) );
@@ -61,7 +61,7 @@ require_once ANSP_DIR . 'includes/class-ansp-rest.php';
 require_once ANSP_DIR . 'includes/class-ansp-scores-source.php';
 require_once ANSP_DIR . 'includes/class-ansp-mirror-rest.php';
 require_once ANSP_DIR . 'includes/class-ansp-dav.php';
-require_once ANSP_DIR . 'includes/class-ansp-optimise-admin.php';
+require_once ANSP_DIR . 'includes/class-ansp-sheet-music-box.php';
 require_once ANSP_DIR . 'includes/class-ansp-player.php';
 
 /**
@@ -95,7 +95,7 @@ function ansp_init() {
 	new ANSP_Materials_Zip(); // Server-side single + bulk .zip download of materials.
 	ANSP_Scores_Source::init();  // Published sheet music from the device-sync mirror, read-only.
 	ANSP_Mirror_Rest::init();  // REST routes so the mirror can be configured without wp-admin.
-	ANSP_Optimise_Admin::init();  // Tom's yes/no on a smaller copy of a published score.
+	ANSP_Sheet_Music_Box::init();  // Set folder -> scan -> name -> add, on the project itself.
 	ANSP_Player::init();  // Inline playback for rehearsal recordings.
 	new ANSP_Project_Meta();
 	new ANSP_Profiles();

@@ -1,0 +1,114 @@
+/* The "Sheet music" panel on a project. */
+
+.ansp-sm-step {
+	display: flex;
+	align-items: center;
+	gap: .5rem;
+	margin: 1.4rem 0 .4rem;
+	font-size: 14px;
+}
+.ansp-sm-step:first-child { margin-top: .2rem; }
+.ansp-sm-step span {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.5rem;
+	height: 1.5rem;
+	border-radius: 999px;
+	background: #2271b1;
+	color: #fff;
+	font-size: 12px;
+	font-weight: 600;
+}
+
+.ansp-sm-muted { color: #666; font-size: 13px; }
+.ansp-sm-current { margin: .2rem 0 .6rem; }
+.ansp-sm-current .ansp-sm-muted { margin-left: .5rem; }
+
+/* ---- folder picker ---- */
+.ansp-sm-picker {
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+	padding: .75rem 1rem;
+	margin: 0 0 1rem;
+	background: #fbfbfc;
+}
+.ansp-sm-crumb {
+	display: flex;
+	align-items: center;
+	gap: .75rem;
+	flex-wrap: wrap;
+	margin: .5rem 0;
+	padding-bottom: .5rem;
+	border-bottom: 1px solid #e6e6e8;
+}
+.ansp-sm-here { font-weight: 600; }
+.ansp-sm-folders {
+	margin: 0;
+	max-height: 16rem;
+	overflow-y: auto;
+}
+.ansp-sm-folders li { margin: 0; padding: .15rem 0; }
+
+/* ---- status line ---- */
+.ansp-sm-status { margin: .5rem 0; font-size: 13px; min-height: 1.2em; }
+.ansp-sm-status.is-ok { color: #007017; }
+.ansp-sm-status.is-error { color: #b32d2e; font-weight: 600; }
+
+/* ---- one file waiting ---- */
+.ansp-sm-row {
+	border: 1px solid #dcdcde;
+	border-left-width: 4px;
+	border-left-color: #dcdcde;
+	border-radius: 4px;
+	padding: .75rem 1rem;
+	margin: 0 0 .75rem;
+	background: #fff;
+}
+/*
+ * The left edge is the warning, not a badge somewhere else on the page. A
+ * large file should be obvious while looking at the row, which is the reason
+ * this panel replaced a separate screen.
+ */
+.ansp-sm-row.is-big { border-left-color: #dba617; }
+
+.ansp-sm-rowhead {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: .5rem 1rem;
+	margin-bottom: .4rem;
+}
+.ansp-sm-file { font-weight: 600; overflow-wrap: anywhere; }
+.ansp-sm-meta { color: #666; font-size: 12px; }
+
+.ansp-sm-warn {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: .5rem;
+	background: #fcf5e6;
+	border: 1px solid #f0d68a;
+	border-radius: 4px;
+	padding: .5rem .75rem;
+	margin: .4rem 0 .6rem;
+	font-size: 13px;
+}
+.ansp-sm-warnicon { color: #a97a05; font-size: 16px; line-height: 1; }
+
+.ansp-sm-good {
+	color: #007017;
+	font-size: 13px;
+	margin: .4rem 0 .6rem;
+}
+
+.ansp-sm-name { margin: .5rem 0; }
+.ansp-sm-name label { display: block; font-weight: 600; font-size: 13px; }
+.ansp-sm-name input { width: 100%; max-width: 32rem; margin-top: .2rem; }
+.ansp-sm-name p { margin: .3rem 0 0; }
+
+.ansp-sm-actions { display: flex; gap: .5rem; margin-top: .6rem; }
+
+@media (max-width: 782px) {
+	.ansp-sm-name input { max-width: none; }
+}

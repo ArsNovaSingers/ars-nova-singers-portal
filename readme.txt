@@ -4,7 +4,7 @@ Tags: members, portal, choir, private, materials
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.29.0
+Stable tag: 1.29.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -71,7 +71,7 @@ Since 1.2.0 there are no per-material grants: any logged-in portal member sees e
 
 == Changelog ==
 
-= Unreleased =
+= 1.29.1 =
 * **Fixed: the "Wrong name or email?" form ran off the right-hand edge of the card.** The `<details>` holding it was a flex item with no width rule, and a flex item defaults to refusing to shrink below its own content - so it sized itself to two 12rem fields plus a button and overflowed. Nothing was too wide; the box holding it had never been told how wide it was allowed to be.
 * **Fixed: the email field sat on top of the name field.** This stylesheet declares `box-sizing` nowhere, so an input at `width: 100%` plus its padding and border came out wider than the column holding it.
 * **Fixed: the per-guest note box was always open in the cart.** An author `display` rule beats the browser's own `[hidden] { display: none }`, so `.ansp-comp-field` was silently un-hiding every field marked hidden - leaving the "+ Add a note for them" button sitting above a note box that was already showing. The JS that set `box.hidden = false` to reveal it had been a no-op since it shipped. Found while fixing the form above; the same mistake, one line apart.

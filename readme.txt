@@ -4,7 +4,7 @@ Tags: members, portal, choir, private, materials
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.28.0
+Stable tag: 1.29.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -71,7 +71,7 @@ Since 1.2.0 there are no per-material grants: any logged-in portal member sees e
 
 == Changelog ==
 
-= Unreleased =
+= 1.29.0 =
 * **"My Comps" — a singer can see what they already sent.** Under the cart, every comp they have issued: the guest, their address, which night and where, how many seats, when it went out, and whether it has been scanned at the door. Jonathan asked for "the comp ledger with the title 'My Comps' with the data of what was sent".
 * **Send it again.** A guest who says nothing arrived gets the same ticket resent, from the singer's own screen, without anyone emailing the office. Capped at five sends and one a minute — past that the address is the problem, not the delivery.
 * **Fix a wrong name or email, and the ticket follows.** Correcting the ADDRESS resends automatically: someone fixing a typo has already decided the ticket should go, and making them press a second button invites them to stop after the first and believe their guest now has a ticket. Correcting only the name does not resend — the ticket already reached the right inbox.

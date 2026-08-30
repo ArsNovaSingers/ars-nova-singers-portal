@@ -65,6 +65,8 @@ require_once ANSP_DIR . 'includes/class-ansp-sheet-music-box.php';
 require_once ANSP_DIR . 'includes/class-ansp-player.php';
 require_once ANSP_DIR . 'includes/class-ansp-venue.php';
 require_once ANSP_DIR . 'includes/class-ansp-comp-allowance.php';
+require_once ANSP_DIR . 'includes/class-ansp-project-ticketing.php';
+require_once ANSP_DIR . 'includes/class-ansp-comp-claim.php';
 
 /**
  * Boot the plugin.
@@ -101,6 +103,8 @@ function ansp_init() {
 	ANSP_Player::init();  // Inline playback for rehearsal recordings.
 	ANSP_Venue::init();  // Venues: capacity, address and access notes on a real record.
 	ANSP_Comp_Allowance::init();  // Comps per singer, set on the Project.
+	ANSP_Project_Ticketing::init();  // Project <-> Tickera event_category, auto-linked.
+	ANSP_Comp_Claim::init();  // Singers claim their comps from the portal.
 	new ANSP_Project_Meta();
 	new ANSP_Profiles();
 	new ANSP_Login();

@@ -4,7 +4,7 @@ Tags: members, portal, choir, private, materials
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.27.0
+Stable tag: 1.27.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -71,7 +71,7 @@ Since 1.2.0 there are no per-material grants: any logged-in portal member sees e
 
 == Changelog ==
 
-= Unreleased =
+= 1.27.1 =
 * **Archiving a project now stops its comps.** 1.27.0 read a project's WordPress status but not the portal's own Active/Archived switch, so archiving a finished production left its comp allowance spendable - singers could still claim seats for a concert that had already happened. The claim panel now honours the same Status field Kim and Tom already set on the project edit screen, with the same "unset means active" reading `tab-season-materials.php` uses, so the two screens cannot disagree about what is live.
 * Auto-created projects are stamped `active` explicitly instead of relying on an absent field meaning active. An auto-created project is the one nobody has opened yet, so it is exactly where a missing value is most likely to be misread as "not configured".
 * `GET portal/project-ticketing` now reports both statuses under names that cannot be confused - `post_status` (draft vs published) and `portal_status` (active vs archived). A project can be published AND archived at once, and that pairing is precisely what hides it from singers.

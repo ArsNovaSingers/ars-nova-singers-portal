@@ -860,18 +860,59 @@
 	padding: 0;
 }
 
-/* Each guest is one row: name, email, performance, qty, remove. */
+/* Each guest is one BLOCK: a row of fields, then an optional note beneath it.
+   1.28.0 made .ansp-comp-row the flex container itself. The note added in
+   1.29.0 has to span the full width, so the flexing moved down one level to
+   .ansp-comp-row-main and the row became the stack that holds both. */
 .ansp-comp-row {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: flex-end;
-	gap: .5rem;
+	display: block;
 	padding: .5rem 0;
 	border-top: 1px solid rgba(0, 0, 0, .08);
 }
 
+.ansp-comp-row-main {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: .5rem;
+}
+
 .ansp-comp-row:first-child {
 	border-top: 0;
+}
+
+/* The optional note to the guest, folded away until it is asked for. */
+.ansp-comp-row-note {
+	margin-top: .4rem;
+}
+
+.ansp-comp-note-toggle {
+	background: none;
+	border: 0;
+	padding: 0;
+	cursor: pointer;
+	font: inherit;
+	font-size: .82rem;
+	font-weight: 600;
+	opacity: .65;
+	text-decoration: underline;
+}
+
+.ansp-comp-note-toggle:hover,
+.ansp-comp-note-toggle:focus {
+	opacity: 1;
+}
+
+.ansp-comp-field--note {
+	width: 100%;
+}
+
+.ansp-comp-field--note textarea {
+	width: 100%;
+	padding: .4rem .5rem;
+	font: inherit;
+	line-height: 1.4;
+	resize: vertical;
 }
 
 .ansp-comp-field {
@@ -973,6 +1014,179 @@
 	}
 
 	.ansp-comp-actions .ansp-btn {
+		flex: 1 0 100%;
+	}
+}
+
+/* -------------------------------------------------------------------------
+   "My Comps" ledger (1.29.0)
+
+   A LIST OF CARDS, NOT A TABLE. The obvious shape for "what did I send" is a
+   table, and a table with six columns is unreadable on the phone this is
+   actually read on. Each comp is a small card that stacks: who, what, when,
+   and the two things that can still be done about it.
+   ------------------------------------------------------------------------- */
+.ansp-ledger {
+	margin-top: 2rem;
+	padding-top: 1.25rem;
+	border-top: 2px solid rgba(0, 0, 0, .1);
+}
+
+.ansp-ledger-title {
+	margin: 0 0 .25rem;
+}
+
+.ansp-ledger-intro {
+	margin: 0 0 1rem;
+	font-size: .9rem;
+	opacity: .75;
+}
+
+.ansp-ledger-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.ansp-ledger-item {
+	padding: .85rem 0;
+	border-top: 1px solid rgba(0, 0, 0, .08);
+}
+
+.ansp-ledger-item:first-child {
+	border-top: 0;
+}
+
+.ansp-ledger-who {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: .5rem;
+}
+
+.ansp-ledger-guest {
+	font-weight: 600;
+}
+
+.ansp-ledger-email {
+	font-size: .88rem;
+	opacity: .7;
+	word-break: break-all;
+}
+
+.ansp-ledger-what {
+	display: flex;
+	flex-wrap: wrap;
+	gap: .5rem;
+	margin-top: .15rem;
+	font-size: .9rem;
+}
+
+.ansp-ledger-qty {
+	opacity: .7;
+}
+
+.ansp-ledger-state {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: .6rem;
+	margin-top: .35rem;
+	font-size: .85rem;
+}
+
+.ansp-ledger-sent {
+	opacity: .7;
+}
+
+.ansp-ledger-badge {
+	border: 1px solid rgba(0, 0, 0, .18);
+	border-radius: 999px;
+	padding: .1rem .55rem;
+	font-size: .78rem;
+	opacity: .7;
+}
+
+/* Scanned at the door is the one fact on this card that is fully certain,
+   so it is the only thing coloured. */
+.ansp-ledger-badge.is-used {
+	border-color: #2f7a43;
+	color: #2f7a43;
+	font-weight: 600;
+	opacity: 1;
+}
+
+.ansp-ledger-note {
+	margin: .4rem 0 0;
+	font-size: .85rem;
+	font-style: italic;
+	opacity: .75;
+}
+
+.ansp-ledger-actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: .75rem;
+	margin-top: .55rem;
+}
+
+.ansp-ledger-form {
+	margin: 0;
+}
+
+.ansp-ledger-maxed {
+	margin: 0;
+	font-size: .82rem;
+	opacity: .7;
+}
+
+.ansp-ledger-fix > summary {
+	cursor: pointer;
+	font-size: .85rem;
+	opacity: .7;
+}
+
+.ansp-ledger-fix > summary:hover {
+	opacity: 1;
+}
+
+.ansp-ledger-form--fix {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: .5rem;
+	margin-top: .5rem;
+	padding: .65rem;
+	border-radius: 6px;
+	background: rgba(0, 0, 0, .03);
+}
+
+.ansp-ledger-form--fix .ansp-comp-field {
+	flex: 1 1 12rem;
+}
+
+.ansp-ledger-form--fix input {
+	padding: .4rem .5rem;
+	width: 100%;
+	max-width: 100%;
+	min-width: 0;
+}
+
+.ansp-ledger-hint {
+	flex: 1 0 100%;
+	margin: 0;
+	font-size: .8rem;
+	opacity: .7;
+}
+
+@media (max-width: 34rem) {
+	.ansp-ledger-actions,
+	.ansp-ledger-fix {
+		width: 100%;
+	}
+
+	.ansp-ledger-form--fix .ansp-comp-field {
 		flex: 1 0 100%;
 	}
 }

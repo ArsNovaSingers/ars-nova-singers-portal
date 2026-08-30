@@ -101,6 +101,7 @@ $ansp_old       = ANSP_Comp_Claim::get_returned_rows();
 					<ul class="ansp-comp-rows" data-ansp-comp-rows>
 						<?php foreach ( $ansp_rows as $ansp_i => $ansp_row ) : ?>
 							<li class="ansp-comp-row">
+							  <div class="ansp-comp-row-main">
 								<span class="ansp-comp-field ansp-comp-field--name">
 									<label class="ansp-comp-label"><?php esc_html_e( 'Full name', 'ans-singers-portal' ); ?></label>
 									<input type="text" name="guest_name[]" value="<?php echo esc_attr( $ansp_row['name'] ); ?>" autocomplete="off" />
@@ -126,6 +127,18 @@ $ansp_old       = ANSP_Comp_Claim::get_returned_rows();
 												echo esc_html( $ansp_perf['title'] );
 												if ( $ansp_when ) {
 													echo ' — ' . esc_html( $ansp_when );
+												}
+												/*
+												 * THE VENUE MATTERS NOW. Staging's event titles were
+												 * shortened to the production name so the ticket PDFs
+												 * would lay out, which means all three Rivers & Streams
+												 * nights read identically here and are told apart only
+												 * by their date. Two of them are in different towns.
+												 * Sending a guest to Boulder for a Denver concert is
+												 * exactly the mistake this line prevents.
+												 */
+												if ( ! empty( $ansp_perf['location'] ) ) {
+													echo ' · ' . esc_html( $ansp_perf['location'] );
 												}
 												?>
 											</option>
@@ -155,6 +168,45 @@ $ansp_old       = ANSP_Comp_Claim::get_returned_rows();
 										title="<?php esc_attr_e( 'Remove this guest', 'ans-singers-portal' ); ?>"
 									>&times;</button>
 								</span>
+							  </div>
+
+								<?php
+								/*
+								 * Kim's request, per guest: an OPTIONAL message that travels
+								 * with the ticket. Folded away behind a link rather than sitting
+								 * open, because most comps carry no note and four open textareas
+								 * would make a two-guest cart look like a form to fill in.
+								 *
+								 * The textarea is rendered for EVERY row whether it is showing
+								 * or not, and `hidden` does not stop a field submitting. That is
+								 * load-bearing: the handler reads five parallel arrays by index,
+								 * so a row that skipped its note would shift every note after it
+								 * onto the wrong guest.
+								 */
+								$ansp_note = isset( $ansp_row['note'] ) ? (string) $ansp_row['note'] : '';
+								?>
+							  <div class="ansp-comp-row-note">
+									<button
+										type="button"
+										class="ansp-comp-note-toggle"
+										data-ansp-comp-note-toggle
+										<?php echo '' !== $ansp_note ? 'hidden' : ''; ?>
+									><?php esc_html_e( '+ Add a note for them', 'ans-singers-portal' ); ?></button>
+
+									<span
+										class="ansp-comp-field ansp-comp-field--note"
+										data-ansp-comp-note
+										<?php echo '' === $ansp_note ? 'hidden' : ''; ?>
+									>
+										<label class="ansp-comp-label"><?php esc_html_e( 'Note for them (optional)', 'ans-singers-portal' ); ?></label>
+										<textarea
+											name="guest_note[]"
+											rows="2"
+											maxlength="<?php echo esc_attr( defined( 'ANS_COMP_NOTE_MAX' ) ? ANS_COMP_NOTE_MAX : 500 ); ?>"
+											placeholder="<?php esc_attr_e( 'Come and find me afterwards!', 'ans-singers-portal' ); ?>"
+										><?php echo esc_textarea( $ansp_note ); ?></textarea>
+									</span>
+							  </div>
 							</li>
 						<?php endforeach; ?>
 					</ul>
@@ -181,8 +233,10 @@ $ansp_old       = ANSP_Comp_Claim::get_returned_rows();
 
 <?php
 /*
- * The "My Comps" ledger lands in the next step. Until then a singer sees what
- * they have left but not what they already sent, which is why this is a
- * deliberate note rather than a silence.
+ * "My Comps" - everything this singer already sent, with resend and a details
+ * fix. It renders NOTHING when there is no history, so a first-time singer sees
+ * only the cart, and it is deliberately outside the empty-cart branch above: a
+ * singer who has spent every comp has an empty cart and the most to look at.
  */
+ansp_get_template( 'comp-ledger' );
 

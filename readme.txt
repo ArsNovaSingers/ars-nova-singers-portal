@@ -71,6 +71,17 @@ Since 1.2.0 there are no per-material grants: any logged-in portal member sees e
 
 == Changelog ==
 
+= Unreleased =
+* **"My Comps" — a singer can see what they already sent.** Under the cart, every comp they have issued: the guest, their address, which night and where, how many seats, when it went out, and whether it has been scanned at the door. Jonathan asked for "the comp ledger with the title 'My Comps' with the data of what was sent".
+* **Send it again.** A guest who says nothing arrived gets the same ticket resent, from the singer's own screen, without anyone emailing the office. Capped at five sends and one a minute — past that the address is the problem, not the delivery.
+* **Fix a wrong name or email, and the ticket follows.** Correcting the ADDRESS resends automatically: someone fixing a typo has already decided the ticket should go, and making them press a second button invites them to stop after the first and believe their guest now has a ticket. Correcting only the name does not resend — the ticket already reached the right inbox.
+* The ticket itself needs no reissue when a name is corrected, because it carries "Comp from &lt;singer&gt;" rather than the guest's name. That is what makes a text-only fix sufficient.
+* **Received is not a column, deliberately.** Sent we know, and used we know — Tickera stamps the ticket when it is scanned. Received we do not: WordPress can only report that a message was handed to the mail server, which is neither delivery nor that anyone opened it. A green tick derived from that would be a comfortable lie, and the one time it mattered — a guest at the door with no ticket — it is the reason nobody would look further. Real delivery tracking is the next step.
+* **An optional note to each guest**, in the singer's own words, carried in the email with their ticket. Kim's request, for both her admin issuing screen (shipped in ans-comp-tickets 0.5.0) and here. Per guest, never required, folded away until asked for.
+* **The venue is back in the performance list.** All three Rivers & Streams nights now share a title, so the date was the only thing telling them apart — and two of them are in different towns. Sending a guest to Boulder for a Denver concert is the mistake this prevents.
+* The Comp Tickets tab now also appears for a singer with nothing left to claim. Before the ledger existed, "nothing to claim" and "nothing to see" were the same thing; hiding the tab at the exact moment the ledger becomes the only useful thing on it would have been the worst possible timing.
+* A comp now records which PERFORMANCE it was for, not only which production, so the ledger can name the night. Comps issued before this read it back off the ticket instead, so the ones already on staging name their night too.
+
 = 1.28.0 =
 * **Comps are issued to named guests, several at a time.** The claim panel is now a cart: one line per guest with their full name, their email, which performance and how many tickets, a **+ Add another guest** button, and one **Issue comps** at the end. Jonathan on using the old one-at-a-time version: "having to repeat the process of selecting and claiming a ticket one ticket at a time is dumb." A singer with two comps is usually inviting two different people, often to different nights.
 * **The ticket goes to the guest, not the singer.** Their name and email go on the comp order, so the ticket is emailed straight to them and the order reads as theirs. Before this the ticket was addressed to the singer, who then had to forward it.

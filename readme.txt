@@ -4,7 +4,7 @@ Tags: members, portal, choir, private, materials
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.26.0
+Stable tag: 1.27.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -71,7 +71,7 @@ Since 1.2.0 there are no per-material grants: any logged-in portal member sees e
 
 == Changelog ==
 
-= Unreleased =
+= 1.27.0 =
 * **Singers can claim their comp tickets.** 1.26.0 gave the per-singer allowance a home on the project and said plainly that nothing could spend it. A **Comp Tickets** tab now appears in the portal for any singer with an unspent allowance, showing how many they have left, letting them pick an upcoming performance, and emailing the ticket PDF straight to them. The tab hides itself entirely when there is nothing to claim, because a tab that always says "nothing here" teaches people to stop opening it.
 * **The hub and the ticketing system are finally joined.** There were two unconnected notions of "project": a Tickera event category (where the tickets live) and an `ans_project` post (where the music and the allowance live). Same production, same name, two ids, nothing linking them - so the allowance could be read but never spent, because nothing could answer "2 of what?". A project now stores the event category it is ticketed as.
 * **The link makes itself.** Filing a performance under a category ensures that production exists on the hub side and is linked by id. Kim and Tom build the season in Tickera; requiring them to then remember to hand-create a matching hub project with an identical name is a step that gets forgotten, and its failure mode is silent. Auto-created projects are DRAFTS - an empty production should not appear to singers just because somebody made a ticket.
@@ -80,8 +80,6 @@ Since 1.2.0 there are no per-material grants: any logged-in portal member sees e
 * **Nothing here issues a ticket.** Every claim calls `ans_comp_issue()` in ans-comp-tickets, so every guard that plugin owns - published parent event, real ticket product, read-back verification of what was generated, Mailchimp suppression, silencing the untrue "payment failed" notice - is inherited rather than reimplemented. A second issuing path would drift from the first the day someone fixed a bug in only one of them.
 * Claims are re-checked against the allowance at submit time, not trusted from the form, so two open tabs cannot both spend the last one. Voiding a comp returns the singer's claim.
 * Fails closed everywhere: no comp plugin, no WooCommerce, an unlinked project or a performance with no ticket product all mean the tab simply does not appear.
-
-= Unreleased =
 
 = 1.26.0 =
 * **Comp tickets per singer, set on the project.** A "Comp tickets" box on the project edit screen, where Kim says how many complimentary tickets each singer may claim for that project. 0 means none, and that is a real answer rather than an empty field.

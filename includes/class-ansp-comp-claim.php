@@ -217,27 +217,26 @@ class ANSP_Comp_Claim {
 	}
 
 	/**
-	 * How many comps this singer has already claimed on this project.
+	 * Every live comp order this singer has raised on this project.
 	 *
-	 * Counts ORDERS, not tickets: the allowance is "how many times may you
-	 * claim", and a claim is one order. Cancelled and refunded orders are
-	 * excluded, so a voided comp gives the singer their claim back - which is
-	 * the whole reason Void exists.
+	 * Cancelled and refunded orders are excluded, so voiding a comp gives the
+	 * singer their allowance back - which is the whole reason Void exists.
 	 *
 	 * @param int $user_id
 	 * @param int $project_id
-	 * @return int
+	 * @return WC_Order[]
 	 */
-	public static function claimed_count( $user_id, $project_id ) {
+	public static function claimed_orders( $user_id, $project_id ) {
 		if ( ! function_exists( 'wc_get_orders' ) ) {
-			return 0;
+			return array();
 		}
 
 		$orders = wc_get_orders(
 			array(
 				'limit'      => 100,
 				'status'     => array( 'wc-completed', 'wc-processing', 'wc-on-hold', 'wc-pending' ),
-				'return'     => 'ids',
+				'orderby'    => 'date',
+				'order'      => 'DESC',
 				'meta_query' => array(
 					'relation' => 'AND',
 					array( 'key' => '_ans_comp_claimant', 'value' => (int) $user_id ),
@@ -246,7 +245,32 @@ class ANSP_Comp_Claim {
 			)
 		);
 
-		return is_array( $orders ) ? count( $orders ) : 0;
+		return is_array( $orders ) ? $orders : array();
+	}
+
+	/**
+	 * How many TICKETS this singer has already taken on this project.
+	 *
+	 * COUNTS TICKETS, NOT ORDERS, and that distinction is the whole point.
+	 * 1.27.0 counted orders, which was harmless only because every claim was
+	 * exactly one ticket. The moment a row can say "3 tickets for the Chens",
+	 * counting orders makes an allowance of 2 mean nothing at all - three
+	 * orders of four tickets each would read as 3 against a limit of 2 and
+	 * still be under it on the fourth.
+	 *
+	 * get_item_count() is WooCommerce's sum of line-item quantities, which is
+	 * the number of seats given away.
+	 *
+	 * @param int $user_id
+	 * @param int $project_id
+	 * @return int
+	 */
+	public static function claimed_count( $user_id, $project_id ) {
+		$used = 0;
+		foreach ( self::claimed_orders( $user_id, $project_id ) as $order ) {
+			$used += (int) $order->get_item_count();
+		}
+		return $used;
 	}
 
 	/* ---------------------------------------------------------------------
@@ -265,12 +289,15 @@ class ANSP_Comp_Claim {
 	}
 
 	/**
-	 * Handle a claim submission.
+	 * Handle a cart submission: several guests, each their own comp order.
 	 *
 	 * Post/Redirect/Get throughout: a browser refresh must not be able to issue
-	 * a second ticket, and the failure modes here all end in a redirect
-	 * carrying a message rather than a white screen on a phone in a rehearsal
-	 * room.
+	 * a second set of tickets, and every failure ends in a redirect carrying a
+	 * message rather than a white screen on a phone in a rehearsal room.
+	 *
+	 * VALIDATE EVERYTHING FIRST, THEN ISSUE. A bad address in row three must
+	 * not leave rows one and two already sent - the singer would have no way
+	 * to tell which had gone and would resubmit the lot.
 	 *
 	 * @return void
 	 */
@@ -291,9 +318,7 @@ class ANSP_Comp_Claim {
 		check_admin_referer( self::NONCE );
 
 		$project_id = isset( $_POST['project_id'] ) ? (int) $_POST['project_id'] : 0;
-		$event_id   = isset( $_POST['event_id'] ) ? (int) $_POST['event_id'] : 0;
-
-		if ( ! $project_id || ! $event_id ) {
+		if ( ! $project_id ) {
 			wp_safe_redirect( self::redirect_url( array( 'ansp_comp' => 'badrequest' ) ) );
 			exit;
 		}
@@ -304,14 +329,12 @@ class ANSP_Comp_Claim {
 		}
 
 		/*
-		 * Re-derive everything from the project id rather than trusting the
-		 * form. The remaining count especially: the page may have been open in
-		 * a tab since this morning, and two tabs must not both spend the last
-		 * claim.
+		 * Re-derive the project and its remaining allowance from the server
+		 * rather than trusting the form. The page may have been open in a tab
+		 * since this morning; two tabs must not both spend the last comp.
 		 */
-		$claimable = self::get_claimable( $user_id );
-		$project   = null;
-		foreach ( $claimable as $row ) {
+		$project = null;
+		foreach ( self::get_claimable( $user_id ) as $row ) {
 			if ( $row['project_id'] === $project_id ) {
 				$project = $row;
 				break;
@@ -323,80 +346,246 @@ class ANSP_Comp_Claim {
 			exit;
 		}
 
-		if ( $project['remaining'] < 1 ) {
-			wp_safe_redirect( self::redirect_url( array( 'ansp_comp' => 'none_left' ) ) );
+		$rows = self::read_rows( $project );
+
+		if ( empty( $rows['valid'] ) && empty( $rows['errors'] ) ) {
+			wp_safe_redirect( self::redirect_url( array( 'ansp_comp' => 'norows' ) ) );
 			exit;
 		}
 
-		$product_id = 0;
-		$perf_title = '';
-		foreach ( $project['performances'] as $perf ) {
-			if ( (int) $perf['id'] === $event_id ) {
-				$product_id = (int) $perf['product_id'];
-				$perf_title = $perf['title'];
-				break;
-			}
-		}
-
-		if ( ! $product_id ) {
-			wp_safe_redirect( self::redirect_url( array( 'ansp_comp' => 'noperformance' ) ) );
-			exit;
-		}
-
-		$user = get_userdata( $user_id );
-		if ( ! $user || ! is_email( $user->user_email ) ) {
-			wp_safe_redirect( self::redirect_url( array( 'ansp_comp' => 'noemail' ) ) );
-			exit;
-		}
-
-		$result = ans_comp_issue(
-			array(
-				'performance_id'   => $product_id,
-				'qty'              => 1,
-				'recipient_name'   => $user->display_name,
-				'recipient_email'  => $user->user_email,
-				'reason'           => sprintf(
-					/* translators: 1: project title, 2: performance title. */
-					__( 'Singer comp claimed from the portal - %1$s, %2$s', 'ans-singers-portal' ),
-					get_the_title( $project_id ),
-					$perf_title
-				),
-				'source'           => 'portal-claim',
-				'issued_by'        => $user_id,
-				'claimant_user_id' => $user_id,
-			)
-		);
-
-		if ( is_wp_error( $result ) ) {
+		if ( ! empty( $rows['errors'] ) ) {
+			self::remember_rows( $project_id, $rows['raw'] );
 			wp_safe_redirect(
 				self::redirect_url(
 					array(
-						'ansp_comp'     => 'failed',
-						'ansp_comp_msg' => rawurlencode( $result->get_error_message() ),
+						'ansp_comp'     => 'invalid',
+						'ansp_comp_msg' => rawurlencode( implode( ' ', $rows['errors'] ) ),
 					)
 				)
 			);
 			exit;
 		}
 
-		/*
-		 * Stamp the project so this claim counts against the right allowance.
-		 * If this write were to fail the singer would keep the ticket and the
-		 * claim would not count - generous rather than punitive, and the order
-		 * still carries the claimant and the reason text, so a ledger reader
-		 * can still see what happened.
-		 */
-		if ( ! empty( $result['order_id'] ) ) {
-			$order = wc_get_order( (int) $result['order_id'] );
-			if ( $order ) {
-				$order->update_meta_data( self::META_PROJECT, $project_id );
-				$order->save();
+		$wanted = 0;
+		foreach ( $rows['valid'] as $row ) {
+			$wanted += $row['qty'];
+		}
+
+		if ( $wanted > $project['remaining'] ) {
+			self::remember_rows( $project_id, $rows['raw'] );
+			wp_safe_redirect(
+				self::redirect_url(
+					array(
+						'ansp_comp'     => 'overallowance',
+						'ansp_comp_msg' => rawurlencode(
+							sprintf(
+								/* translators: 1: tickets asked for, 2: tickets remaining. */
+								__( 'That asks for %1$d tickets and you have %2$d left.', 'ans-singers-portal' ),
+								$wanted,
+								$project['remaining']
+							)
+						),
+					)
+				)
+			);
+			exit;
+		}
+
+		$user = get_userdata( $user_id );
+
+		$issued = 0;
+		$failed = array();
+
+		foreach ( $rows['valid'] as $row ) {
+			$result = ans_comp_issue(
+				array(
+					'performance_id'   => $row['product_id'],
+					'qty'              => $row['qty'],
+					'recipient_name'   => $row['name'],
+					'recipient_email'  => $row['email'],
+					'reason'           => sprintf(
+						/* translators: 1: singer name, 2: project title, 3: performance title. */
+						__( 'Singer comp claimed by %1$s - %2$s, %3$s', 'ans-singers-portal' ),
+						$user ? $user->display_name : ( 'user ' . $user_id ),
+						get_the_title( $project_id ),
+						$row['perf_title']
+					),
+					'source'           => 'portal-claim',
+					'issued_by'        => $user_id,
+					'claimant_user_id' => $user_id,
+				)
+			);
+
+			if ( is_wp_error( $result ) ) {
+				$failed[] = $row['name'] . ': ' . $result->get_error_message();
+				continue;
+			}
+
+			$issued += $row['qty'];
+
+			/*
+			 * Stamp the project so this comp counts against the right
+			 * allowance. If this write failed the guest would keep the ticket
+			 * and the count would not move - generous rather than punitive,
+			 * and the order still carries the claimant and the reason text.
+			 */
+			if ( ! empty( $result['order_id'] ) ) {
+				$order = wc_get_order( (int) $result['order_id'] );
+				if ( $order ) {
+					$order->update_meta_data( self::META_PROJECT, $project_id );
+					$order->save();
+				}
 			}
 		}
 
-		wp_safe_redirect( self::redirect_url( array( 'ansp_comp' => 'claimed' ) ) );
+		if ( $failed ) {
+			/*
+			 * Partial success is reported as partial. Saying "done" when two of
+			 * three went out is the kind of lie that gets found at the door.
+			 */
+			wp_safe_redirect(
+				self::redirect_url(
+					array(
+						'ansp_comp'     => $issued ? 'partial' : 'failed',
+						'ansp_comp_n'   => $issued,
+						'ansp_comp_msg' => rawurlencode( implode( ' | ', $failed ) ),
+					)
+				)
+			);
+			exit;
+		}
+
+		wp_safe_redirect( self::redirect_url( array( 'ansp_comp' => 'claimed', 'ansp_comp_n' => $issued ) ) );
 		exit;
 	}
+
+	/**
+	 * Read, sanitise and validate the submitted cart rows.
+	 *
+	 * Returns valid rows resolved to a ticket product, a list of human errors,
+	 * and the raw input so a rejected cart can be handed back to the singer
+	 * with their typing intact.
+	 *
+	 * @param array $project A row from get_claimable().
+	 * @return array{valid:array,errors:array,raw:array}
+	 */
+	protected static function read_rows( $project ) {
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- caller ran check_admin_referer.
+		$names  = isset( $_POST['guest_name'] ) ? (array) wp_unslash( $_POST['guest_name'] ) : array();
+		$emails = isset( $_POST['guest_email'] ) ? (array) wp_unslash( $_POST['guest_email'] ) : array();
+		$events = isset( $_POST['guest_event'] ) ? (array) wp_unslash( $_POST['guest_event'] ) : array();
+		$qtys   = isset( $_POST['guest_qty'] ) ? (array) wp_unslash( $_POST['guest_qty'] ) : array();
+		// phpcs:enable
+
+		$valid  = array();
+		$errors = array();
+		$raw    = array();
+
+		$count = max( count( $names ), count( $emails ), count( $events ), count( $qtys ) );
+
+		for ( $i = 0; $i < $count; $i++ ) {
+			$name  = isset( $names[ $i ] ) ? sanitize_text_field( (string) $names[ $i ] ) : '';
+			$email = isset( $emails[ $i ] ) ? sanitize_email( (string) $emails[ $i ] ) : '';
+			$event = isset( $events[ $i ] ) ? (int) $events[ $i ] : 0;
+			$qty   = isset( $qtys[ $i ] ) ? (int) $qtys[ $i ] : 1;
+
+			// A wholly blank line is the spare row nobody filled in, not an error.
+			if ( '' === $name && '' === $email ) {
+				continue;
+			}
+
+			$raw[] = array( 'name' => $name, 'email' => $email, 'event_id' => $event, 'qty' => $qty );
+			$label = '' !== $name ? $name : __( 'a guest', 'ans-singers-portal' );
+
+			if ( '' === $name ) {
+				$errors[] = sprintf(
+					/* translators: %s: the email address entered. */
+					__( 'A name is needed for %s.', 'ans-singers-portal' ),
+					$email
+				);
+				continue;
+			}
+
+			if ( ! is_email( $email ) ) {
+				$errors[] = sprintf(
+					/* translators: %s: guest name. */
+					__( '%s needs a valid email address - that is where the ticket goes.', 'ans-singers-portal' ),
+					$label
+				);
+				continue;
+			}
+
+			if ( $qty < 1 ) {
+				$errors[] = sprintf(
+					/* translators: %s: guest name. */
+					__( '%s needs at least one ticket.', 'ans-singers-portal' ),
+					$label
+				);
+				continue;
+			}
+
+			$product_id = 0;
+			$perf_title = '';
+			foreach ( $project['performances'] as $perf ) {
+				if ( (int) $perf['id'] === $event ) {
+					$product_id = (int) $perf['product_id'];
+					$perf_title = $perf['title'];
+					break;
+				}
+			}
+
+			if ( ! $product_id ) {
+				$errors[] = sprintf(
+					/* translators: %s: guest name. */
+					__( 'Pick a performance for %s.', 'ans-singers-portal' ),
+					$label
+				);
+				continue;
+			}
+
+			$valid[] = array(
+				'name'       => $name,
+				'email'      => $email,
+				'event_id'   => $event,
+				'qty'        => $qty,
+				'product_id' => $product_id,
+				'perf_title' => $perf_title,
+			);
+		}
+
+		return array( 'valid' => $valid, 'errors' => $errors, 'raw' => $raw );
+	}
+
+	/**
+	 * Hold a rejected cart so the singer gets their typing back.
+	 *
+	 * A transient keyed to the user, not a query string: guest names and email
+	 * addresses are other people's personal data and have no business in a URL,
+	 * a browser history or a server log.
+	 *
+	 * @param int   $project_id
+	 * @param array $rows
+	 * @return void
+	 */
+	protected static function remember_rows( $project_id, $rows ) {
+		set_transient( 'ansp_comp_rows_' . get_current_user_id(), array( (int) $project_id => $rows ), 10 * MINUTE_IN_SECONDS );
+	}
+
+	/**
+	 * Take back a rejected cart, once.
+	 *
+	 * @return array project_id => rows
+	 */
+	public static function get_returned_rows() {
+		$key  = 'ansp_comp_rows_' . get_current_user_id();
+		$rows = get_transient( $key );
+		if ( ! $rows ) {
+			return array();
+		}
+		delete_transient( $key );
+		return is_array( $rows ) ? $rows : array();
+	}
+
 
 	/**
 	 * Human-readable result of the last claim, for the panel to show.
@@ -412,14 +601,49 @@ class ANSP_Comp_Claim {
 		$msg  = isset( $_GET['ansp_comp_msg'] ) ? sanitize_text_field( wp_unslash( $_GET['ansp_comp_msg'] ) ) : '';
 		// phpcs:enable
 
+		$n = isset( $_GET['ansp_comp_n'] ) ? (int) $_GET['ansp_comp_n'] : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- display-only.
+
+		if ( 'claimed' === $code ) {
+			return array(
+				'type' => 'success',
+				'text' => sprintf(
+					/* translators: %d: number of tickets issued. */
+					_n(
+						'%d comp ticket is on its way - your guest will get it by email.',
+						'%d comp tickets are on their way - your guests will get them by email.',
+						max( 1, $n ),
+						'ans-singers-portal'
+					),
+					max( 1, $n )
+				),
+			);
+		}
+
+		if ( 'partial' === $code ) {
+			return array(
+				'type' => 'error',
+				'text' => sprintf(
+					/* translators: 1: how many were issued, 2: the failures. */
+					__( 'Only %1$d went out. The rest did not: %2$s', 'ans-singers-portal' ),
+					$n,
+					$msg
+				),
+			);
+		}
+
+		if ( in_array( $code, array( 'invalid', 'overallowance' ), true ) && $msg ) {
+			return array( 'type' => 'error', 'text' => $msg );
+		}
+
 		$map = array(
-			'claimed'       => array( 'success', __( 'Your comp ticket is on its way - check your email for the PDF.', 'ans-singers-portal' ) ),
-			'none_left'     => array( 'error', __( 'You have already claimed all of your comps for that project.', 'ans-singers-portal' ) ),
+			'none_left'     => array( 'error', __( 'You have already used all of your comps for that project.', 'ans-singers-portal' ) ),
 			'notallowed'    => array( 'error', __( 'You do not have a comp allowance for that project.', 'ans-singers-portal' ) ),
 			'noperformance' => array( 'error', __( 'That performance is not available for a comp.', 'ans-singers-portal' ) ),
-			'noemail'       => array( 'error', __( 'Your account has no valid email address, so a ticket could not be sent. Please contact the office.', 'ans-singers-portal' ) ),
+			'norows'        => array( 'error', __( 'Add at least one guest before issuing.', 'ans-singers-portal' ) ),
+			'invalid'       => array( 'error', __( 'Some rows need fixing before anything can be sent.', 'ans-singers-portal' ) ),
+			'overallowance' => array( 'error', __( 'That is more tickets than you have left.', 'ans-singers-portal' ) ),
 			'noengine'      => array( 'error', __( 'Comp ticketing is not available on this site right now.', 'ans-singers-portal' ) ),
-			'denied'        => array( 'error', __( 'You do not have access to claim comps.', 'ans-singers-portal' ) ),
+			'denied'        => array( 'error', __( 'You do not have access to issue comps.', 'ans-singers-portal' ) ),
 			'badrequest'    => array( 'error', __( 'Something was missing from that request. Please try again.', 'ans-singers-portal' ) ),
 		);
 

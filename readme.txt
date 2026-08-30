@@ -71,6 +71,15 @@ Since 1.2.0 there are no per-material grants: any logged-in portal member sees e
 
 == Changelog ==
 
+= Unreleased =
+* **Comps are issued to named guests, several at a time.** The claim panel is now a cart: one line per guest with their full name, their email, which performance and how many tickets, a **+ Add another guest** button, and one **Issue comps** at the end. Jonathan on using the old one-at-a-time version: "having to repeat the process of selecting and claiming a ticket one ticket at a time is dumb." A singer with two comps is usually inviting two different people, often to different nights.
+* **The ticket goes to the guest, not the singer.** Their name and email go on the comp order, so the ticket is emailed straight to them and the order reads as theirs. Before this the ticket was addressed to the singer, who then had to forward it.
+* Each line becomes its OWN comp order rather than one order with several lines. Void, resend and check-in all work per order, so one order per guest is what makes "resend Sarah's ticket" a thing that can exist at all.
+* **The whole cart is checked before anything is sent.** A bad address on line three does not leave lines one and two already gone - the singer would have no way to tell which had been sent and would send the lot again. A rejected cart is handed back with the typing intact.
+* **The allowance now counts tickets, not orders.** It counted orders before, which was harmless only while every claim was exactly one ticket; the moment a line can say "3 tickets", counting orders would make an allowance of 2 mean nothing. Voiding a comp still returns the seats.
+* Guest names and email addresses are held in a short-lived transient rather than a query string when a cart bounces back - other people's personal data has no business in a URL, a browser history or a server log.
+* A running tally shows how many of the remaining comps the cart is asking for and blocks submission when it asks for too many. It is a courtesy: every rule is enforced again on the server, because a disabled button stops nobody.
+
 = 1.27.1 =
 * **Archiving a project now stops its comps.** 1.27.0 read a project's WordPress status but not the portal's own Active/Archived switch, so archiving a finished production left its comp allowance spendable - singers could still claim seats for a concert that had already happened. The claim panel now honours the same Status field Kim and Tom already set on the project edit screen, with the same "unset means active" reading `tab-season-materials.php` uses, so the two screens cannot disagree about what is live.
 * Auto-created projects are stamped `active` explicitly instead of relying on an absent field meaning active. An auto-created project is the one nobody has opened yet, so it is exactly where a missing value is most likely to be misread as "not configured".

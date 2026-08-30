@@ -886,20 +886,36 @@
 	margin-top: .4rem;
 }
 
+/* `color` is load-bearing here - see the note on .ansp-comp-remove below.
+   Kadence paints every bare <button> #ffffff, so 1.29.0's version of this rule
+   rendered "+ Add a note for them" in white on a white card: present in the
+   DOM, occupying its space, focusable, clickable, and invisible. Jonathan
+   reported the note field as missing and cleared caches twice; nothing was
+   missing and no cache was involved. The underline was invisible too, because
+   text-decoration follows currentColor. */
 .ansp-comp-note-toggle {
 	background: none;
 	border: 0;
+	border-radius: 0;
+	box-shadow: none;
+	color: var(--ansp-accent);
 	padding: 0;
 	cursor: pointer;
 	font: inherit;
 	font-size: .82rem;
 	font-weight: 600;
-	opacity: .65;
+	opacity: .75;
 	text-decoration: underline;
 }
 
+/* (0,2,0), which beats Kadence's `button:hover` at (0,1,1). A plain class
+   selector would lose and the text would go white again on hover. */
 .ansp-comp-note-toggle:hover,
-.ansp-comp-note-toggle:focus {
+.ansp-comp-note-toggle:focus,
+.ansp-comp-note-toggle:active {
+	background: none;
+	box-shadow: none;
+	color: var(--ansp-accent);
 	opacity: 1;
 }
 
@@ -950,10 +966,25 @@
 	min-width: 0;
 }
 
+/* KADENCE PAINTS EVERY BARE <button> WHITE, AND THAT IS WHY `color` IS HERE.
+   Its base stylesheet carries
+     button, .button, .wp-block-button__link, … { background: var(--global-palette-btn-bg);
+                                                  color: var(--global-palette-btn); }
+   and --global-palette-btn resolves to #ffffff. Setting `background: none` and
+   leaving `color` alone - which is what 1.29.0 did - kills the blue pill and
+   leaves white text on a white card. The button is present, focusable and
+   clickable, and completely invisible. Every other button in this file already
+   forces its colour; these two were the ones that forgot.
+
+   The :hover/:focus/:active block is not optional. Kadence's `button:hover`
+   is (0,1,1) and out-specifies a plain `.ansp-comp-remove` at (0,1,0), so
+   without it the text turns white again the moment the pointer arrives. */
 .ansp-comp-remove {
 	background: none;
 	border: 1px solid rgba(0, 0, 0, .18);
 	border-radius: 4px;
+	box-shadow: none;
+	color: var(--ansp-accent);
 	cursor: pointer;
 	font-size: 1.05rem;
 	line-height: 1;
@@ -962,7 +993,11 @@
 }
 
 .ansp-comp-remove:hover,
-.ansp-comp-remove:focus {
+.ansp-comp-remove:focus,
+.ansp-comp-remove:active {
+	background: none;
+	box-shadow: none;
+	color: var(--ansp-accent);
 	opacity: 1;
 }
 

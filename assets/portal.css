@@ -799,3 +799,86 @@
 }
 .ansp-piece--other .ansp-piece-title { font-weight: 500; opacity: 0.75; }
 .ansp-piece-items { margin: 0; padding: 0; list-style: none; }
+
+/* ---------------------------------------------------------------------------
+ * Comp Tickets tab (ANSP_Comp_Claim). Appended rather than inserted: this file
+ * is edited by several features at once and a block at the end conflicts with
+ * nobody.
+ * ------------------------------------------------------------------------ */
+
+.ansp-comp-intro {
+	margin: 0 0 1rem;
+	opacity: .85;
+}
+
+.ansp-comp-card {
+	border: 1px solid rgba(0, 0, 0, .12);
+	border-radius: 6px;
+	padding: 1rem 1.1rem;
+	margin: 0 0 1rem;
+}
+
+.ansp-comp-head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: .5rem;
+}
+
+.ansp-comp-project {
+	margin: 0;
+	font-size: 1.05rem;
+}
+
+/* The count is the first thing worth reading, so it does not shrink away. */
+.ansp-comp-count {
+	margin: 0;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.ansp-comp-count.is-spent {
+	opacity: .6;
+	font-weight: 400;
+}
+
+.ansp-comp-note,
+.ansp-comp-spent {
+	margin: .5rem 0 0;
+	opacity: .8;
+}
+
+.ansp-comp-form {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: .6rem;
+	margin-top: .85rem;
+}
+
+.ansp-comp-label {
+	flex: 1 0 100%;
+	font-weight: 600;
+	margin-bottom: -.2rem;
+}
+
+/* Grows on desktop, full width on a phone - this gets used in a rehearsal
+   room far more often than at a desk. */
+.ansp-comp-select {
+	flex: 1 1 18rem;
+	min-width: 0;
+	max-width: 100%;
+	padding: .45rem .5rem;
+}
+
+.ansp-comp-submit {
+	flex: 0 0 auto;
+}
+
+@media (max-width: 30rem) {
+	.ansp-comp-select,
+	.ansp-comp-submit {
+		flex: 1 0 100%;
+	}
+}

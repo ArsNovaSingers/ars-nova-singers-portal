@@ -281,6 +281,16 @@ class ANSP_Project_Ticketing {
 		}
 
 		update_post_meta( $new_id, self::META_CATEGORY, $term_id );
+
+		/*
+		 * Write the status explicitly rather than leaning on "absent means
+		 * active". Both are read the same way today, but an auto-created
+		 * project is the one nobody has opened, so it is the one where a
+		 * missing field is most likely to be read as "not configured yet" by
+		 * the next thing that looks at it. Say what we mean.
+		 */
+		update_post_meta( $new_id, 'ansp_project_status', 'active' );
+
 		return (int) $new_id;
 	}
 
@@ -552,13 +562,22 @@ class ANSP_Project_Ticketing {
 					continue;
 				}
 				$pid = self::get_project_id( (int) $term->term_id );
+				/*
+				 * TWO different notions of "status" and both matter, so both
+				 * are reported under names that cannot be confused:
+				 *   post_status - WordPress: draft vs published
+				 *   portal_status - ANSP_Project_Meta: active vs archived
+				 * A project can be published and archived at once, and that
+				 * combination is exactly what hides it from singers.
+				 */
 				$out[] = array(
-					'term_id'      => (int) $term->term_id,
-					'category'     => html_entity_decode( $term->name, ENT_QUOTES, 'UTF-8' ),
-					'events'       => (int) $term->count,
-					'project_id'   => $pid,
-					'project'      => $pid ? get_the_title( $pid ) : null,
-					'project_status' => $pid ? get_post_status( $pid ) : null,
+					'term_id'       => (int) $term->term_id,
+					'category'      => html_entity_decode( $term->name, ENT_QUOTES, 'UTF-8' ),
+					'events'        => (int) $term->count,
+					'project_id'    => $pid,
+					'project'       => $pid ? html_entity_decode( get_the_title( $pid ), ENT_QUOTES, 'UTF-8' ) : null,
+					'post_status'   => $pid ? get_post_status( $pid ) : null,
+					'portal_status' => $pid ? ( ( class_exists( 'ANSP_Project_Meta' ) && ANSP_Project_Meta::is_archived( $pid ) ) ? 'archived' : 'active' ) : null,
 				);
 			}
 		}

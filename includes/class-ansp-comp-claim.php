@@ -133,6 +133,24 @@ class ANSP_Comp_Claim {
 		$out = array();
 
 		foreach ( $projects as $pid ) {
+			/*
+			 * ARCHIVED IS THE PORTAL'S OWN "NOT ACTIVE" AND IT GOVERNS HERE TOO.
+			 *
+			 * 1.27.0 shipped without this check, which meant archiving a
+			 * finished production did not stop singers claiming comps against
+			 * it - the allowance stayed spendable on a concert that had already
+			 * happened. Status is the switch Kim and Tom already use on the
+			 * project edit screen; a second, comp-only notion of "still running"
+			 * would drift from it the first time someone archived a project and
+			 * reasonably expected everything about it to stop.
+			 *
+			 * Absent meta means active, matching tab-season-materials.php, so
+			 * the two screens can never disagree about what is live.
+			 */
+			if ( class_exists( 'ANSP_Project_Meta' ) && ANSP_Project_Meta::is_archived( $pid ) ) {
+				continue;
+			}
+
 			$allowance = ANSP_Comp_Allowance::get_allowance( $pid );
 			if ( $allowance <= 0 ) {
 				continue;

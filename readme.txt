@@ -71,6 +71,11 @@ Since 1.2.0 there are no per-material grants: any logged-in portal member sees e
 
 == Changelog ==
 
+= Unreleased =
+* **Archiving a project now stops its comps.** 1.27.0 read a project's WordPress status but not the portal's own Active/Archived switch, so archiving a finished production left its comp allowance spendable - singers could still claim seats for a concert that had already happened. The claim panel now honours the same Status field Kim and Tom already set on the project edit screen, with the same "unset means active" reading `tab-season-materials.php` uses, so the two screens cannot disagree about what is live.
+* Auto-created projects are stamped `active` explicitly instead of relying on an absent field meaning active. An auto-created project is the one nobody has opened yet, so it is exactly where a missing value is most likely to be misread as "not configured".
+* `GET portal/project-ticketing` now reports both statuses under names that cannot be confused - `post_status` (draft vs published) and `portal_status` (active vs archived). A project can be published AND archived at once, and that pairing is precisely what hides it from singers.
+
 = 1.27.0 =
 * **Singers can claim their comp tickets.** 1.26.0 gave the per-singer allowance a home on the project and said plainly that nothing could spend it. A **Comp Tickets** tab now appears in the portal for any singer with an unspent allowance, showing how many they have left, letting them pick an upcoming performance, and emailing the ticket PDF straight to them. The tab hides itself entirely when there is nothing to claim, because a tab that always says "nothing here" teaches people to stop opening it.
 * **The hub and the ticketing system are finally joined.** There were two unconnected notions of "project": a Tickera event category (where the tickets live) and an `ans_project` post (where the music and the allowance live). Same production, same name, two ids, nothing linking them - so the allowance could be read but never spent, because nothing could answer "2 of what?". A project now stores the event category it is ticketed as.

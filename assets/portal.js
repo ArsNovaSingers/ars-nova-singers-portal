@@ -429,3 +429,125 @@
 		} );
 	} );
 } )();
+
+/**
+ * Comp Tickets cart (v1.28.0).
+ *
+ * Repeating guest rows with an add button, a live tally against the singer's
+ * remaining allowance, and a submit that refuses to overspend.
+ *
+ * A SEPARATE DOMContentLoaded block rather than an addition inside the one
+ * above: this file is edited by several features at once, and an append at the
+ * end collides with nobody.
+ *
+ * The tally is a courtesy, not a control. Every rule enforced here is enforced
+ * again server-side in ANSP_Comp_Claim::handle_claim(), because a disabled
+ * button stops nobody who can open dev tools.
+ */
+( function () {
+	'use strict';
+
+	document.addEventListener( 'DOMContentLoaded', function () {
+		var carts = Array.prototype.slice.call( document.querySelectorAll( '[data-ansp-comp-cart]' ) );
+
+		carts.forEach( function ( cart ) {
+			var list      = cart.querySelector( '[data-ansp-comp-rows]' );
+			var addBtn    = cart.querySelector( '[data-ansp-comp-add]' );
+			var submitBtn = cart.querySelector( '.ansp-comp-submit' );
+			var tally     = cart.querySelector( '[data-ansp-comp-tally]' );
+			var remaining = parseInt( cart.getAttribute( 'data-ansp-remaining' ), 10 ) || 0;
+
+			if ( ! list || ! addBtn ) {
+				return;
+			}
+
+			function rows() {
+				return Array.prototype.slice.call( list.querySelectorAll( '.ansp-comp-row' ) );
+			}
+
+			function wanted() {
+				return rows().reduce( function ( sum, row ) {
+					var name  = row.querySelector( 'input[name="guest_name[]"]' );
+					var email = row.querySelector( 'input[name="guest_email[]"]' );
+					var qty   = row.querySelector( '[data-ansp-comp-qty]' );
+					// An untouched spare row is not a request for tickets.
+					if ( ( ! name || ! name.value.trim() ) && ( ! email || ! email.value.trim() ) ) {
+						return sum;
+					}
+					return sum + ( parseInt( qty && qty.value, 10 ) || 0 );
+				}, 0 );
+			}
+
+			function refresh() {
+				var n    = wanted();
+				var over = n > remaining;
+
+				if ( tally ) {
+					if ( ! n ) {
+						tally.textContent = '';
+					} else if ( over ) {
+						tally.textContent = n + ' of ' + remaining + ' — that is ' + ( n - remaining ) + ' too many';
+					} else {
+						tally.textContent = n + ' of ' + remaining + ' selected';
+					}
+					tally.classList.toggle( 'is-over', over );
+				}
+
+				if ( submitBtn ) {
+					submitBtn.disabled = over || ! n;
+				}
+
+				// Only offer removal while there is more than one row to remove.
+				var all = rows();
+				all.forEach( function ( row ) {
+					var btn = row.querySelector( '[data-ansp-comp-remove]' );
+					if ( btn ) {
+						btn.hidden = all.length < 2;
+					}
+				} );
+
+				if ( addBtn ) {
+					addBtn.disabled = n >= remaining;
+				}
+			}
+
+			addBtn.addEventListener( 'click', function () {
+				var all = rows();
+				if ( ! all.length ) {
+					return;
+				}
+
+				var copy = all[ all.length - 1 ].cloneNode( true );
+
+				Array.prototype.slice.call( copy.querySelectorAll( 'input' ) ).forEach( function ( input ) {
+					input.value = ( input.getAttribute( 'type' ) === 'number' ) ? '1' : '';
+				} );
+
+				list.appendChild( copy );
+				refresh();
+
+				var firstField = copy.querySelector( 'input[name="guest_name[]"]' );
+				if ( firstField ) {
+					firstField.focus();
+				}
+			} );
+
+			list.addEventListener( 'click', function ( e ) {
+				var btn = e.target.closest ? e.target.closest( '[data-ansp-comp-remove]' ) : null;
+				if ( ! btn ) {
+					return;
+				}
+				var row = btn.closest( '.ansp-comp-row' );
+				if ( row && rows().length > 1 ) {
+					row.parentNode.removeChild( row );
+					refresh();
+				}
+			} );
+
+			list.addEventListener( 'input', refresh );
+			list.addEventListener( 'change', refresh );
+
+			refresh();
+		} );
+	} );
+} )();

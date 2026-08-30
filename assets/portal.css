@@ -922,6 +922,15 @@
 	min-width: 0;
 }
 
+/* An author `display` beats the browser's own `[hidden] { display: none }`,
+   so the rule above silently un-hid every field carrying `hidden` — which in
+   1.29.0 meant the per-guest note box was always open in the cart and the
+   "+ Add a note for them" button sat above an already-open note. Found while
+   fixing the ledger form; same family of mistake, one line apart. */
+.ansp-comp-field[hidden] {
+	display: none;
+}
+
 .ansp-comp-field--name  { flex: 2 1 11rem; }
 .ansp-comp-field--email { flex: 3 1 14rem; }
 .ansp-comp-field--event { flex: 4 1 18rem; }
@@ -1151,6 +1160,22 @@
 	opacity: 1;
 }
 
+/* The <details> takes a line of its own inside .ansp-ledger-actions, at the
+   full width of the card.
+
+   1.29.0 gave it no width rule at all, and a flex item defaults to
+   `min-width: auto` — meaning it refuses to shrink below its own content. The
+   open form is two 12rem fields plus a button, so the item sized itself to
+   that and ran straight off the right-hand edge of the card, taking the fields
+   with it. Nothing was too wide; the box holding it had never been told how
+   wide it was allowed to be. `flex-basis: 100%` puts it on its own row and
+   `min-width: 0` lets it shrink to fit — without the second, the first is not
+   enough. */
+.ansp-ledger-fix {
+	flex: 1 0 100%;
+	min-width: 0;
+}
+
 .ansp-ledger-form--fix {
 	display: flex;
 	flex-wrap: wrap;
@@ -1160,17 +1185,31 @@
 	padding: .65rem;
 	border-radius: 6px;
 	background: rgba(0, 0, 0, .03);
+	box-sizing: border-box;
+	max-width: 100%;
 }
 
 .ansp-ledger-form--fix .ansp-comp-field {
 	flex: 1 1 12rem;
+	min-width: 0;
 }
 
-.ansp-ledger-form--fix input {
+/* box-sizing is set here rather than assumed. This stylesheet declares it
+   nowhere, so `width: 100%` plus padding and a border makes an input wider
+   than the column holding it — which is what pushed the email field on top of
+   the name field. The type selectors are deliberate: they outrank a theme rule
+   on bare `input`, and Kadence has one. */
+.ansp-ledger-form--fix input[type="text"],
+.ansp-ledger-form--fix input[type="email"] {
+	box-sizing: border-box;
 	padding: .4rem .5rem;
 	width: 100%;
 	max-width: 100%;
 	min-width: 0;
+}
+
+.ansp-ledger-form--fix .ansp-btn {
+	flex: 0 0 auto;
 }
 
 .ansp-ledger-hint {

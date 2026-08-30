@@ -4,7 +4,7 @@ Tags: members, portal, choir, private, materials
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.29.1
+Stable tag: 1.29.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -71,7 +71,7 @@ Since 1.2.0 there are no per-material grants: any logged-in portal member sees e
 
 == Changelog ==
 
-= Unreleased =
+= 1.29.2 =
 * **Fixed: "+ Add a note for them" and the row's remove button were invisible.** Both were rendering white text on a white card. Kadence styles every bare `<button>` with `color: var(--global-palette-btn)`, which resolves to `#ffffff`; these two rules killed the theme's blue background but never set a colour of their own, so the text inherited white. The buttons were present, focusable and clickable the whole time - which is why clearing caches changed nothing and why the note field looked like it had never shipped.
 * The hover and focus states set the colour again deliberately: Kadence's `button:hover` out-specifies a plain class selector, so without it the text turned white again the moment the pointer arrived.
 

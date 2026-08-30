@@ -4,7 +4,7 @@ Tags: members, portal, choir, private, materials
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.27.1
+Stable tag: 1.28.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -71,7 +71,7 @@ Since 1.2.0 there are no per-material grants: any logged-in portal member sees e
 
 == Changelog ==
 
-= Unreleased =
+= 1.28.0 =
 * **Comps are issued to named guests, several at a time.** The claim panel is now a cart: one line per guest with their full name, their email, which performance and how many tickets, a **+ Add another guest** button, and one **Issue comps** at the end. Jonathan on using the old one-at-a-time version: "having to repeat the process of selecting and claiming a ticket one ticket at a time is dumb." A singer with two comps is usually inviting two different people, often to different nights.
 * **The ticket goes to the guest, not the singer.** Their name and email go on the comp order, so the ticket is emailed straight to them and the order reads as theirs. Before this the ticket was addressed to the singer, who then had to forward it.
 * Each line becomes its OWN comp order rather than one order with several lines. Void, resend and check-in all work per order, so one order per guest is what makes "resend Sarah's ticket" a thing that can exist at all.

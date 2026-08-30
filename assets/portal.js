@@ -523,6 +523,26 @@
 					input.value = ( input.getAttribute( 'type' ) === 'number' ) ? '1' : '';
 				} );
 
+				/*
+				 * Textareas are cloned as well and the loop above only touches
+				 * inputs, so without this the new guest silently inherits the
+				 * previous guest's personal note - which would then be mailed
+				 * to a stranger. Close the note block back up while we are
+				 * here: a fresh row should look fresh, not half-edited.
+				 */
+				Array.prototype.slice.call( copy.querySelectorAll( 'textarea' ) ).forEach( function ( area ) {
+					area.value = '';
+				} );
+
+				var copyNote   = copy.querySelector( '[data-ansp-comp-note]' );
+				var copyToggle = copy.querySelector( '[data-ansp-comp-note-toggle]' );
+				if ( copyNote ) {
+					copyNote.hidden = true;
+				}
+				if ( copyToggle ) {
+					copyToggle.hidden = false;
+				}
+
 				list.appendChild( copy );
 				refresh();
 
@@ -533,13 +553,39 @@
 			} );
 
 			list.addEventListener( 'click', function ( e ) {
-				var btn = e.target.closest ? e.target.closest( '[data-ansp-comp-remove]' ) : null;
+				if ( ! e.target.closest ) {
+					return;
+				}
+
+				/*
+				 * Reveal a guest's note field. One-way on purpose: a second
+				 * press that hid the box again would leave typed text still in
+				 * the form and still on its way to the guest, invisible. If the
+				 * singer changes their mind they clear the text, which is what
+				 * actually cancels the note.
+				 */
+				var noteBtn = e.target.closest( '[data-ansp-comp-note-toggle]' );
+				if ( noteBtn ) {
+					var row  = noteBtn.closest( '.ansp-comp-row' );
+					var box  = row && row.querySelector( '[data-ansp-comp-note]' );
+					var area = box && box.querySelector( 'textarea' );
+					if ( box ) {
+						box.hidden     = false;
+						noteBtn.hidden = true;
+					}
+					if ( area ) {
+						area.focus();
+					}
+					return;
+				}
+
+				var btn = e.target.closest( '[data-ansp-comp-remove]' );
 				if ( ! btn ) {
 					return;
 				}
-				var row = btn.closest( '.ansp-comp-row' );
-				if ( row && rows().length > 1 ) {
-					row.parentNode.removeChild( row );
+				var gone = btn.closest( '.ansp-comp-row' );
+				if ( gone && rows().length > 1 ) {
+					gone.parentNode.removeChild( gone );
 					refresh();
 				}
 			} );

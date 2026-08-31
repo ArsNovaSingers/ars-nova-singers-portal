@@ -66,6 +66,12 @@ require_once ANSP_DIR . 'includes/class-ansp-player.php';
 require_once ANSP_DIR . 'includes/class-ansp-venue.php';
 require_once ANSP_DIR . 'includes/class-ansp-comp-allowance.php';
 require_once ANSP_DIR . 'includes/class-ansp-project-ticketing.php';
+/**
+ * Performance -> Venue. Loaded after class-ansp-venue.php because it resolves
+ * capacity through ANSP_Venue, and before project-ticketing uses its
+ * local_ts() helper at call time.
+ */
+require_once ANSP_DIR . 'includes/class-ansp-event-venue.php';
 require_once ANSP_DIR . 'includes/class-ansp-comp-claim.php';
 
 /**
@@ -104,6 +110,7 @@ function ansp_init() {
 	ANSP_Venue::init();  // Venues: capacity, address and access notes on a real record.
 	ANSP_Comp_Allowance::init();  // Comps per singer, set on the Project.
 	ANSP_Project_Ticketing::init();  // Project <-> Tickera event_category, auto-linked.
+	ANSP_Event_Venue::init();  // Performance -> Venue, so capacity has a path.
 	ANSP_Comp_Claim::init();  // Singers claim their comps from the portal.
 	new ANSP_Project_Meta();
 	new ANSP_Profiles();

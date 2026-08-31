@@ -530,6 +530,42 @@ class ANSP_REST {
 			}
 		}
 
+		/*
+		 * WordPress post status, and note the parameter name.
+		 *
+		 * `status` is ALREADY TAKEN above: it writes ansp_project_status, the
+		 * portal's own active/archived flag, which is a completely different
+		 * idea from whether the post is published. Reusing that name here would
+		 * mean one word silently doing two jobs, and the caller would have no
+		 * way to say which it meant. Hence `post_status`.
+		 *
+		 * This was missing entirely until 1.30.1. ans_project is registered
+		 * show_in_rest => false, so wp/v2 cannot reach it - it returns
+		 * rest_post_invalid_id - and this route, which is the project writer,
+		 * had no way to publish a project. Auto-created projects therefore
+		 * arrived as drafts that nothing but wp-admin could ever publish.
+		 */
+		$post_status = $req->get_param( 'post_status' );
+		if ( null !== $post_status ) {
+			$ps      = sanitize_key( (string) $post_status );
+			$allowed = array( 'publish', 'draft', 'pending', 'private' );
+
+			if ( ! in_array( $ps, $allowed, true ) ) {
+				return new WP_Error(
+					'ansp_bad_post_status',
+					'post_status must be one of: ' . implode( ', ', $allowed ) . '.',
+					array( 'status' => 400 )
+				);
+			}
+
+			if ( $ps !== $p->post_status ) {
+				$res = wp_update_post( array( 'ID' => $id, 'post_status' => $ps ), true );
+				if ( is_wp_error( $res ) ) {
+					return $res;
+				}
+			}
+		}
+
 		$season = $req->get_param( 'season' );
 		if ( null !== $season ) {
 			wp_set_object_terms( $id, is_array( $season ) ? $season : array( $season ), 'ans_season', false );

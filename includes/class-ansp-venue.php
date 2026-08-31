@@ -70,7 +70,12 @@ class ANSP_Venue {
 			'address'  => array(
 				'label' => __( 'Address', 'ans-singers-portal' ),
 				'type'  => 'textarea',
-				'help'  => __( 'Never published publicly. Used for tickets and confirmations only.', 'ans-singers-portal' ),
+				'help'  => __( 'The real street address. Always store it here — the checkbox below decides whether it may be shown publicly.', 'ans-singers-portal' ),
+			),
+			'address_private' => array(
+				'label' => __( 'Private address', 'ans-singers-portal' ),
+				'type'  => 'bool',
+				'help'  => __( 'Tick for a house concert or any venue whose address must not be public. The address is then sent on tickets and confirmation emails ONLY, and the public site shows the venue name alone.', 'ans-singers-portal' ),
 			),
 			'notes'    => array(
 				'label' => __( 'Access / parking notes', 'ans-singers-portal' ),
@@ -232,6 +237,21 @@ class ANSP_Venue {
 					esc_attr( $name ),
 					esc_attr( '' === $value ? '' : (string) (int) $value )
 				);
+			} elseif ( 'bool' === $field['type'] ) {
+				/*
+				 * The hidden 0 is load-bearing. An unchecked checkbox is not
+				 * POSTed at all, and save_meta() skips any field that is not
+				 * present - so without this, UNTICKING the box would be a
+				 * silent no-op and the address would stay private for ever.
+				 * The hidden input guarantees the key is always submitted.
+				 */
+				printf(
+					'<input type="hidden" name="%1$s" value="0" />'
+					. '<label><input type="checkbox" id="%1$s" name="%1$s" value="1"%2$s /> %3$s</label>',
+					esc_attr( $name ),
+					checked( (string) $value, '1', false ),
+					esc_html__( 'Do not show this address publicly', 'ans-singers-portal' )
+				);
 			} else {
 				printf(
 					'<input type="text" id="%1$s" name="%1$s" value="%2$s" class="regular-text" />',
@@ -317,7 +337,43 @@ class ANSP_Venue {
 			return;
 		}
 
+		if ( 'bool' === $fields[ $key ]['type'] ) {
+			/*
+			 * Stored as '1' or '' rather than as a boolean, so that an absent
+			 * value and a false value read identically. Anything a browser or
+			 * a REST caller might send for "true" is accepted, because the
+			 * cost of a checkbox that silently fails to tick is a private
+			 * address quietly going public.
+			 */
+			$on = in_array(
+				strtolower( trim( (string) $value ) ),
+				array( '1', 'true', 'yes', 'on' ),
+				true
+			);
+			update_post_meta( $post_id, $name, $on ? '1' : '' );
+			return;
+		}
+
 		update_post_meta( $post_id, $name, sanitize_text_field( (string) $value ) );
+	}
+
+	/**
+	 * Is this venue's address private?
+	 *
+	 * Defaults to FALSE, and that default is the safe one only because the
+	 * address is not published anywhere by this plugin - the public string on
+	 * a Tickera event is authored separately. A venue nobody has opened is
+	 * therefore not leaking anything; it simply has no opinion yet.
+	 *
+	 * @param int $venue_id
+	 * @return bool
+	 */
+	public static function is_address_private( $venue_id ) {
+		$venue_id = (int) $venue_id;
+		if ( $venue_id <= 0 ) {
+			return false;
+		}
+		return '1' === (string) get_post_meta( $venue_id, self::META_PREFIX . 'address_private', true );
 	}
 
 	/**

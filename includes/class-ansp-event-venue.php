@@ -58,6 +58,31 @@ class ANSP_Event_Venue {
 	const NONCE = 'ansp_event_venue_save';
 
 	/**
+	 * The ticketing bridge's per-event private address. WE DO NOT OWN THIS KEY.
+	 *
+	 * `ars-nova-ticketing-bridge` defines it and resolves it: its
+	 * ans_tb_event_location() returns this when set and falls back to
+	 * event_location otherwise, and that is what reaches the ticket PDF and the
+	 * confirmation email.
+	 *
+	 * The portal WRITES it rather than the bridge READING the portal, and the
+	 * direction is deliberate. Ticketing must keep working with this plugin
+	 * inactive - a members plugin can never be allowed to break a box-office
+	 * action or a public sale. Writing outward keeps the dependency pointing
+	 * the safe way: if the portal vanishes, the bridge still finds a value.
+	 */
+	const BRIDGE_PRIVATE_META = 'ans_private_location';
+
+	/**
+	 * Marks a private address this class wrote, so it knows what it may change.
+	 *
+	 * Without it, un-ticking "private" would have to either clobber a value a
+	 * human typed straight onto the event, or never clean up after itself. The
+	 * marker means we only ever overwrite or remove our own writes.
+	 */
+	const MANAGED_FLAG = 'ansp_private_location_managed';
+
+	/**
 	 * Register. Everything hangs off hooks that already exist; no existing
 	 * behaviour is edited.
 	 */
@@ -65,6 +90,155 @@ class ANSP_Event_Venue {
 		add_action( 'add_meta_boxes', array( __CLASS__, 'add_meta_box' ) );
 		add_action( 'save_post_' . self::EVENT_TYPE, array( __CLASS__, 'save_meta' ), 10, 2 );
 		add_action( 'rest_api_init', array( __CLASS__, 'register_routes' ) );
+
+		/*
+		 * Editing a venue re-syncs every performance at it. Priority 20 so
+		 * ANSP_Venue::save_meta() at the default 10 has already written the
+		 * address and the private flag we are about to read.
+		 */
+		if ( class_exists( 'ANSP_Venue' ) ) {
+			add_action( 'save_post_' . ANSP_Venue::POST_TYPE, array( __CLASS__, 'sync_venue' ), 20, 2 );
+		}
+	}
+
+	/* ---------------------------------------------------------------------
+	 * Private address -> the ticket and the confirmation email
+	 * ------------------------------------------------------------------ */
+
+	/**
+	 * Push one performance's private address out to the bridge, or clear it.
+	 *
+	 * WHAT THIS BUYS. Before it, "never publish this address" was a rule a
+	 * person had to remember on every event they created, and the address
+	 * itself lived in two unrelated places. Now it is a property of the venue,
+	 * set once, and every performance there inherits it.
+	 *
+	 * Three states, and the third is the one worth spelling out:
+	 *
+	 *   private + address  -> write the address to the bridge's key
+	 *   not private        -> remove OUR value, leave a hand-typed one alone
+	 *   private, no address-> write nothing, and report it. A venue marked
+	 *                         private with an empty address is a half-finished
+	 *                         edit, and inventing a value would be worse than
+	 *                         leaving the public string in place.
+	 *
+	 * @param int  $event_id
+	 * @param bool $apply    False to report without writing.
+	 * @return array{action:string,event_id:int,venue_id:int,detail:string}
+	 */
+	public static function sync_private_location( $event_id, $apply = true ) {
+		$event_id = (int) $event_id;
+		$venue_id = self::get_venue_id( $event_id );
+
+		$row = array(
+			'event_id' => $event_id,
+			'venue_id' => $venue_id,
+			'action'   => 'no_change',
+			'detail'   => '',
+		);
+
+		if ( ! class_exists( 'ANSP_Venue' ) ) {
+			$row['detail'] = 'ANSP_Venue is not available.';
+			return $row;
+		}
+
+		$current = (string) get_post_meta( $event_id, self::BRIDGE_PRIVATE_META, true );
+		$managed = '1' === (string) get_post_meta( $event_id, self::MANAGED_FLAG, true );
+
+		$private = $venue_id && ANSP_Venue::is_address_private( $venue_id );
+		$address = $venue_id
+			? trim( (string) get_post_meta( $venue_id, ANSP_Venue::META_PREFIX . 'address', true ) )
+			: '';
+
+		if ( $private && '' === $address ) {
+			$row['action'] = 'needs_address';
+			$row['detail'] = 'Venue is marked private but has no address stored. Nothing written.';
+			return $row;
+		}
+
+		if ( $private ) {
+			if ( $current === $address && $managed ) {
+				$row['detail'] = 'Already correct.';
+				return $row;
+			}
+
+			if ( '' !== $current && ! $managed ) {
+				$row['action'] = 'skipped_hand_set';
+				$row['detail'] = 'This event already carries a private address that was not written by the venue. Left alone — clear it on the event to let the venue take over.';
+				return $row;
+			}
+
+			$row['action'] = $apply ? 'written' : 'would_write';
+			$row['detail'] = 'Private address from the venue.';
+
+			if ( $apply ) {
+				update_post_meta( $event_id, self::BRIDGE_PRIVATE_META, $address );
+				update_post_meta( $event_id, self::MANAGED_FLAG, '1' );
+			}
+
+			return $row;
+		}
+
+		// Not private. Only ever clean up after ourselves.
+		if ( $managed && '' !== $current ) {
+			$row['action'] = $apply ? 'cleared' : 'would_clear';
+			$row['detail'] = 'Venue is no longer private, so the address we wrote has been removed.';
+
+			if ( $apply ) {
+				delete_post_meta( $event_id, self::BRIDGE_PRIVATE_META );
+				delete_post_meta( $event_id, self::MANAGED_FLAG );
+			}
+
+			return $row;
+		}
+
+		$row['detail'] = '' !== $current
+			? 'Event has a hand-set private address; the venue is not private. Left alone.'
+			: 'Nothing to do.';
+
+		return $row;
+	}
+
+	/**
+	 * Re-sync every performance linked to a venue. Fired when a venue is saved.
+	 *
+	 * @param int     $venue_id
+	 * @param WP_Post $venue
+	 * @return array Rows, one per event.
+	 */
+	public static function sync_venue( $venue_id, $venue = null, $apply = true ) {
+		$venue_id = (int) $venue_id;
+		$out      = array();
+
+		if ( ! post_type_exists( self::EVENT_TYPE ) || $venue_id <= 0 ) {
+			return $out;
+		}
+
+		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+			return $out;
+		}
+
+		$events = get_posts(
+			array(
+				'post_type'     => self::EVENT_TYPE,
+				'post_status'   => array( 'publish', 'draft', 'private' ),
+				'numberposts'   => 200,
+				'fields'        => 'ids',
+				'no_found_rows' => true,
+				'meta_query'    => array(
+					array(
+						'key'   => self::META,
+						'value' => $venue_id,
+					),
+				),
+			)
+		);
+
+		foreach ( $events as $eid ) {
+			$out[] = self::sync_private_location( $eid, $apply );
+		}
+
+		return $out;
 	}
 
 	/* ---------------------------------------------------------------------
@@ -161,6 +335,8 @@ class ANSP_Event_Venue {
 
 		if ( $venue_id <= 0 ) {
 			delete_post_meta( $event_id, self::META );
+			// Unlinking must also retract an address the old venue put there.
+			self::sync_private_location( $event_id );
 			return true;
 		}
 
@@ -169,6 +345,15 @@ class ANSP_Event_Venue {
 		}
 
 		update_post_meta( $event_id, self::META, $venue_id );
+
+		/*
+		 * Re-sync on every link change, not just on venue edits. Moving a
+		 * performance from a private venue to a public one has to retract the
+		 * address, and moving it the other way has to supply one — neither
+		 * touches the venue post, so neither would fire the save_post hook.
+		 */
+		self::sync_private_location( $event_id );
+
 		return true;
 	}
 
@@ -509,6 +694,16 @@ class ANSP_Event_Venue {
 
 		register_rest_route(
 			self::ns(),
+			'/portal/private-locations/sync',
+			array(
+				'methods'             => 'POST',
+				'permission_callback' => $auth,
+				'callback'            => array( __CLASS__, 'rest_sync' ),
+			)
+		);
+
+		register_rest_route(
+			self::ns(),
 			'/portal/event/(?P<id>\d+)/venue',
 			array(
 				array(
@@ -667,6 +862,66 @@ class ANSP_Event_Venue {
 			'changed' => $changed,
 			'note'    => $apply ? 'Applied.' : 'DRY RUN — nothing written. Re-send with apply: true.',
 			'results' => $out,
+		);
+	}
+
+	/**
+	 * POST /portal/private-locations/sync
+	 *
+	 * Re-sync every performance's private address from its venue. Dry run
+	 * unless apply=true. Pass venue_id to scope it to one venue.
+	 */
+	public static function rest_sync( $req ) {
+		$apply    = filter_var( $req->get_param( 'apply' ), FILTER_VALIDATE_BOOLEAN );
+		$venue_id = (int) $req->get_param( 'venue_id' );
+
+		if ( ! post_type_exists( self::EVENT_TYPE ) ) {
+			return new WP_Error( 'ansp_no_events', 'tc_events is not registered - is Tickera active?', array( 'status' => 400 ) );
+		}
+
+		if ( $venue_id > 0 ) {
+			$rows = self::sync_venue( $venue_id, null, $apply );
+		} else {
+			$events = get_posts(
+				array(
+					'post_type'     => self::EVENT_TYPE,
+					'post_status'   => array( 'publish', 'draft', 'private' ),
+					'numberposts'   => 200,
+					'fields'        => 'ids',
+					'no_found_rows' => true,
+				)
+			);
+
+			$rows = array();
+			foreach ( $events as $eid ) {
+				$rows[] = self::sync_private_location( $eid, $apply );
+			}
+		}
+
+		$interesting = array_values(
+			array_filter(
+				$rows,
+				function ( $r ) {
+					return 'no_change' !== $r['action'];
+				}
+			)
+		);
+
+		foreach ( $interesting as &$r ) {
+			$r['title'] = html_entity_decode( get_the_title( $r['event_id'] ), ENT_QUOTES, 'UTF-8' );
+			$r['venue'] = $r['venue_id'] ? self::get_venue_name( $r['event_id'] ) : null;
+		}
+		unset( $r );
+
+		return array(
+			'applied'   => $apply,
+			'scanned'   => count( $rows ),
+			'changed'   => count( $interesting ),
+			'note'      => $apply
+				? 'Applied.'
+				: 'DRY RUN — nothing written. Re-send with apply: true.',
+			'unchanged' => count( $rows ) - count( $interesting ),
+			'results'   => $interesting,
 		);
 	}
 

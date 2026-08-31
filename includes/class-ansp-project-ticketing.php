@@ -379,12 +379,35 @@ class ANSP_Project_Ticketing {
 			)
 		);
 
-		$now = current_time( 'timestamp' );
+		/*
+		 * time(), NOT current_time('timestamp'). local_ts() below returns a
+		 * REAL Unix timestamp, while current_time('timestamp') returns one
+		 * shifted by the site's UTC offset - a "fake local" number that is only
+		 * comparable to another equally-shifted number. Mixing the two is the
+		 * same class of error in the opposite direction. Both sides of this
+		 * comparison are now genuine timestamps.
+		 */
+		$now = time();
 		$out = array();
 
 		foreach ( $events as $eid ) {
 			$when = (string) get_post_meta( $eid, 'event_date_time', true );
-			$ts   = $when ? strtotime( $when ) : 0;
+
+			/*
+			 * NOT strtotime(). Tickera stores event_date_time as a naive
+			 * SITE-LOCAL wall clock, and WordPress runs PHP in UTC, so
+			 * strtotime() lands 6-7 hours off following daylight saving.
+			 *
+			 * This line used to do exactly that, and it produced the right
+			 * answer anyway - because current_time('timestamp') below carries
+			 * the same offset and the two errors cancelled. That is the
+			 * expensive kind of correct: the moment either half is fixed on
+			 * its own, performances start dropping out of "upcoming" 6-7 hours
+			 * before they begin, and a singer loses the ability to claim a comp
+			 * on the afternoon of the concert. Made deliberate rather than
+			 * accidental in 1.30.0.
+			 */
+			$ts = ANSP_Event_Venue::local_ts( $when );
 
 			/*
 			 * An event with no date sorts last but is never hidden. A missing
@@ -396,12 +419,24 @@ class ANSP_Project_Ticketing {
 				continue;
 			}
 
+			/*
+			 * `location` remains Tickera's own free-text string, because that
+			 * is what prints on the ticket and what any existing caller is
+			 * already reading. `venue_id` and `capacity` are added alongside it
+			 * rather than replacing it - the string stays the display value,
+			 * the record becomes the source of truth.
+			 *
+			 * capacity 0 means NOT RECORDED and must be read as "no limit".
+			 */
 			$out[] = array(
 				'id'       => (int) $eid,
 				'title'    => html_entity_decode( get_the_title( $eid ), ENT_QUOTES, 'UTF-8' ),
 				'date'     => $when,
 				'ts'       => $ts,
 				'location' => (string) get_post_meta( $eid, 'event_location', true ),
+				'venue_id' => ANSP_Event_Venue::get_venue_id( $eid ),
+				'venue'    => ANSP_Event_Venue::get_venue_name( $eid ),
+				'capacity' => ANSP_Event_Venue::get_capacity( $eid ),
 			);
 		}
 

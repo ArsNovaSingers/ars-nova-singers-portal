@@ -4,7 +4,7 @@ Tags: members, portal, choir, private, materials
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.29.2
+Stable tag: 1.32.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -71,7 +71,7 @@ Since 1.2.0 there are no per-material grants: any logged-in portal member sees e
 
 == Changelog ==
 
-= Unreleased =
+= 1.32.0 =
 * **The portal is called the Singers Hub.** The heading read "Ars Nova Portal", duplicating the WordPress page title above it. The theme's page title is hidden per-page (`_kad_post_title` = `hide`); install this where that setting has not been applied and the duplicate heading comes back — that is the setting, not this plugin.
 * **Calendars now live inside the ensemble tab they belong to**, as a Calendar sub-tab, instead of a separate Calendar tab that stacked every calendar the viewer could see. A singer in two ensembles no longer has to work out which embed applies to the music in front of them.
 * **Calendar settings are derived from your ensembles instead of three hardcoded slots.** The old fixed slots were `main`, `small` and `friday` — group slugs that no longer exist on this site. Because `get_calendars_for_user()` matches a slot's slug against the viewer's own groups, a slug nobody holds can never match: **every singer had an empty Calendar tab, and the settings screen offered three fields that could not reach anybody.** Nothing errored, which is why it went unnoticed. One field per tab-making ensemble now appears by itself, and matching uses effective group slugs so an Ensemble Singer resolves to the Ars Nova calendar rather than to nothing.

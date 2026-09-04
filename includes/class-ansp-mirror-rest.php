@@ -499,13 +499,34 @@ class ANSP_Mirror_Rest {
 		}
 
 		/*
-		 * Every kind's field, so a caller can see at a glance that a project has
-		 * scores configured and notes not. Reporting only the sheet-music field
-		 * here is what would make an unset notes folder look like a working one.
+		 * Every kind's field AND what each one actually resolves to.
+		 *
+		 * Reporting only the sheet-music field is what would make an unset notes
+		 * folder look like a working one — and reporting only sheet music's
+		 * match count would let a WRONG notes address pass as configured. The
+		 * whole value of this route is that it answers "will singers see
+		 * anything", so it has to answer it per kind.
 		 */
 		$by_kind = array();
 		foreach ( ANSP_Scores_Source::mirror_kinds() as $kind_key => $kind_meta ) {
-			$by_kind[ $kind_key ] = (string) get_post_meta( $id, $kind_meta['meta'], true );
+			$kind_value   = (string) get_post_meta( $id, $kind_meta['meta'], true );
+			$kind_matches = array();
+			foreach ( ANSP_Scores_Source::mirror_targets( $id, $kind_key ) as $kind_target ) {
+				foreach ( $kind_target['groups'] as $kind_group ) {
+					foreach ( ANSP_Scores_Source::library( $kind_group ) as $kind_score ) {
+						if ( ANSP_Scores_Source::score_belongs_to_project( $kind_score, $kind_target['project'] )
+							&& ! empty( $kind_score['canonical'] ) ) {
+							$kind_matches[ (string) $kind_score['canonical'] ] = true;
+						}
+					}
+				}
+			}
+			$by_kind[ $kind_key ] = array(
+				'folders' => $kind_value,
+				'is_set'  => '' !== $kind_value,
+				'matches' => count( $kind_matches ),
+				'files'   => array_keys( $kind_matches ),
+			);
 		}
 
 		$row = array(

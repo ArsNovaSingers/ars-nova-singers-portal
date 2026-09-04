@@ -405,20 +405,40 @@ class ANSP_Mirror_Rest {
 		if ( null === $req->get_param( 'value' ) ) {
 			return new WP_Error(
 				'ansp_mirror_value_missing',
-				'Send value="group/project", or value="" to clear it.',
+				'Send value="group/project", or value="" to clear it. One folder per line. Add kind="rehearsal_note" or kind="recording" to set those instead of sheet music.',
 				array( 'status' => 400 )
 			);
 		}
 
-		$value = trim( sanitize_text_field( (string) $req->get_param( 'value' ) ) );
-		$before = (string) get_post_meta( $id, ANSP_Scores_Source::META_PROJECT, true );
+		/*
+		 * A project names its folders per material type (HUB-19). Without a kind
+		 * here this route could only ever set the sheet-music field, which would
+		 * mean rehearsal notes had to be configured by hand in wp-admin - the
+		 * exact gap that made the mirror config REST-addressable in v1.16.0.
+		 */
+		$kinds = ANSP_Scores_Source::mirror_kinds();
+		$kind  = (string) ( $req->get_param( 'kind' ) ? $req->get_param( 'kind' ) : 'sheet_music' );
+		if ( ! isset( $kinds[ $kind ] ) ) {
+			return new WP_Error(
+				'ansp_mirror_kind_unknown',
+				'Unknown kind "' . $kind . '". Expected one of: ' . implode( ', ', array_keys( $kinds ) ) . '.',
+				array( 'status' => 400 )
+			);
+		}
+		$meta_key = $kinds[ $kind ]['meta'];
+
+		// textarea, not text: sanitize_text_field flattens newlines to spaces and
+		// would silently merge several folder addresses into one unusable string.
+		$value  = trim( sanitize_textarea_field( (string) $req->get_param( 'value' ) ) );
+		$before = (string) get_post_meta( $id, $meta_key, true );
 		if ( '' === $value ) {
-			delete_post_meta( $id, ANSP_Scores_Source::META_PROJECT );
+			delete_post_meta( $id, $meta_key );
 		} else {
-			update_post_meta( $id, ANSP_Scores_Source::META_PROJECT, $value );
+			update_post_meta( $id, $meta_key, $value );
 		}
 
 		$out = self::describe_project( $id, true );
+		$out['kind']           = $kind;
 		$out['previous_value'] = $before;
 		return rest_ensure_response( $out );
 	}
@@ -478,11 +498,22 @@ class ANSP_Mirror_Rest {
 			}
 		}
 
+		/*
+		 * Every kind's field, so a caller can see at a glance that a project has
+		 * scores configured and notes not. Reporting only the sheet-music field
+		 * here is what would make an unset notes folder look like a working one.
+		 */
+		$by_kind = array();
+		foreach ( ANSP_Scores_Source::mirror_kinds() as $kind_key => $kind_meta ) {
+			$by_kind[ $kind_key ] = (string) get_post_meta( $id, $kind_meta['meta'], true );
+		}
+
 		$row = array(
 			'project_id'       => (int) $id,
 			'title'            => get_the_title( $id ),
 			'value'            => $value,
 			'value_is_set'     => '' !== $value,
+			'folders_by_kind'  => $by_kind,
 			'resolved_groups'  => array_values( $target['groups'] ),
 			'resolved_project' => $target['project'],
 			'matching_scores'  => count( $matching ),

@@ -169,15 +169,55 @@ class ANSP_Profiles {
 	 * @param int $post_id Profile ID.
 	 * @return string URL or ''.
 	 */
+	/**
+	 * Which registered size a headshot is served at.
+	 *
+	 * WAS `medium`, WHICH IS WHY ROSTER PHOTOS LOOKED BAD. WordPress's `medium`
+	 * caps the long edge at 300px. The roster grid is three columns on a desktop
+	 * and each card is roughly 360 CSS px wide, with `.ansp-roster-photo` set to
+	 * `width: 100%`. So a 300px file was being stretched past its own size on an
+	 * ordinary laptop, and on any 2x display it was being stretched to about
+	 * two and a half times — reduced, then blown up, exactly as reported.
+	 *
+	 * `large` (1024px) is the smallest stock size that is always bigger than the
+	 * box on every breakpoint including retina, and — unlike a size registered
+	 * here — it already exists for every image ever uploaded to this site, so
+	 * this fixes the existing roster without regenerating a single thumbnail.
+	 *
+	 * The real fix is the srcset in tab-roster.php: the browser then picks a file
+	 * that suits the box rather than downloading 1024px for a phone. This
+	 * constant only decides the `src` fallback.
+	 */
+	const HEADSHOT_SIZE = 'large';
+
 	public static function get_headshot_url( $post_id ) {
 		$thumb_id = get_post_thumbnail_id( (int) $post_id );
 		if ( $thumb_id ) {
-			$src = wp_get_attachment_image_url( $thumb_id, 'medium' );
+			$src = wp_get_attachment_image_url( $thumb_id, self::HEADSHOT_SIZE );
 			if ( $src ) {
 				return $src;
 			}
 		}
 		return (string) get_post_meta( (int) $post_id, 'ansp_headshot_url', true );
+	}
+
+	/**
+	 * The featured-image attachment behind a profile's headshot, or 0.
+	 *
+	 * Exists so a caller can hand the id to wp_get_attachment_image() and get a
+	 * srcset, instead of hand-writing an <img src> that names exactly one file.
+	 * See the HEADSHOT_SIZE note for why that mattered.
+	 *
+	 * Returns 0 for a profile whose headshot is the legacy `ansp_headshot_url`
+	 * meta rather than a Featured Image — that one is an arbitrary external URL
+	 * with no attachment and no sizes, so callers must still fall back to
+	 * get_headshot_url().
+	 *
+	 * @param int $post_id Singer profile ID.
+	 * @return int Attachment ID, or 0.
+	 */
+	public static function get_headshot_id( $post_id ) {
+		return (int) get_post_thumbnail_id( (int) $post_id );
 	}
 
 	/**

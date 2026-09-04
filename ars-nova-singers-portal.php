@@ -58,6 +58,7 @@ require_once ANSP_DIR . 'includes/class-ansp-dashboard.php';
 require_once ANSP_DIR . 'includes/class-ansp-bio-editor.php';
 require_once ANSP_DIR . 'includes/class-ansp-ai-bio.php';
 require_once ANSP_DIR . 'includes/class-ansp-rest.php';
+require_once ANSP_DIR . 'includes/class-ansp-season-io.php';
 require_once ANSP_DIR . 'includes/class-ansp-scores-source.php';
 require_once ANSP_DIR . 'includes/class-ansp-mirror-rest.php';
 require_once ANSP_DIR . 'includes/class-ansp-dav.php';
@@ -125,6 +126,7 @@ function ansp_init() {
 	new ANSP_Bio_Editor();
 	new ANSP_AI_Bio();
 	new ANSP_REST();     // Admin-only REST surface: everything the portal owns, reachable by API.
+	new ANSP_Season_IO(); // Season snapshot export/import — the backup the 2026-09-04 data loss needed.
 }
 add_action( 'plugins_loaded', 'ansp_init' );
 

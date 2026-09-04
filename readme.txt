@@ -71,6 +71,10 @@ Since 1.2.0 there are no per-material grants: any logged-in portal member sees e
 
 == Changelog ==
 
+= Unreleased =
+* **New read-only route `GET ars-nova/v1 portal/notifications`** - the current switch state and the send log, plus, with `?project_id=`, exactly who WOULD be emailed about that project without sending anything. Added because after 1.34.0 stopped the unwanted emails there was still no way to *observe* that it had, or to answer the question singers were actually asking on 2026-09-04: "did I get one?". Reading a fix is not the same as verifying it.
+
+
 = 1.34.0 =
 * **Publishing a project no longer emails the choir.** This class hooked `transition_post_status` and mailed every singer who could see a project the first time it reached `publish` - automatically, with no opt-in, no preview and no record. That hook fires on every path that publishes a project: the wp-admin editor, the `portal/projects` REST writer, a season-snapshot import, WP-CLI, any plugin calling `wp_insert_post()`. Several of those are things a maintenance script does in bulk, and singers were getting mail for each one. Reported by Jonathan 2026-09-04 after complaints at rehearsal. **An email is now only ever sent because a person ticked the box on the project screen.**
 * **New master switch, `ansp_notify_enabled`, and it ships OFF.** Readable and writable through `portal/settings`, so if anything ever mails the choir unexpectedly again it can be stopped with one API call instead of a release. The check lives inside `notify_project()` - the only method that can reach `wp_mail()` - rather than at its callers, so a future caller cannot route around it.

@@ -2,9 +2,11 @@
 /**
  * Portal shell: accessible, mobile-first tabbed interface.
  *
- * Tabs: Home/Announcements · My Bio · Roster · Calendar ·
- * Season Materials. (Past Projects is built but hidden.) Tab switching is handled by
- * assets/portal.js (hash deep-linking, arrow-key navigation).
+ * Tabs: Home/Announcements · Roster · one per ensemble · My Bio (last).
+ * (Past Projects is built but hidden.) Each ensemble tab holds three
+ * sub-tabs — This Week's Assignments, Program Materials, Calendar — see
+ * templates/tab-group.php. Tab switching is handled by assets/portal.js
+ * (hash deep-linking, arrow-key navigation).
  *
  * Only ever rendered for logged-in users with portal access
  * (see ANSP_Portal::render_shortcode).
@@ -16,11 +18,25 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 $ansp_user = wp_get_current_user();
 
+/*
+ * Tab order, and two deliberate absences.
+ *
+ * NO CALENDAR TAB since 1.32.0. Calendars moved inside the group tab they
+ * belong to — see templates/tab-group.php. A standalone tab stacked every
+ * calendar the viewer could see in one place, so a singer in two ensembles
+ * had to work out which embed applied to the music they were looking at.
+ * ANSP_Calendar still renders them; only the location changed.
+ *
+ * MY BIO IS LAST, and it is moved there AFTER the filter below rather than
+ * placed here, so a tab added by another plugin cannot land to the right of
+ * it. Jonathan, 2026-09-03: "My Bio can be the tab furthest to the right."
+ * It is the one tab a singer visits once a season; the ones they open weekly
+ * come first.
+ */
 $ansp_tabs = array(
 	'home'             => __( 'Home', 'ans-singers-portal' ),
-	'bio'              => __( 'My Bio', 'ans-singers-portal' ),
 	'roster'           => __( 'Roster', 'ans-singers-portal' ),
-	'calendar'         => __( 'Calendar', 'ans-singers-portal' ),
+	'bio'              => __( 'My Bio', 'ans-singers-portal' ),
 
 	/*
 	 * Past Projects — HIDDEN 2026-08-20 at Jonathan's request.
@@ -61,7 +77,7 @@ $ansp_tabs = array(
  * ansp_portal_tabs filter, rather than a second page to maintain — which is
  * the reason this stays a variable instead of becoming static markup.
  */
-$ansp_portal_name = __( 'Ars Nova Portal', 'ans-singers-portal' );
+$ansp_portal_name = __( 'Singers Hub', 'ans-singers-portal' );
 if ( in_array( 'ans_board', (array) $ansp_user->roles, true ) ) {
 	$ansp_portal_name = __( 'Board Portal', 'ans-singers-portal' );
 }
@@ -90,6 +106,21 @@ if ( empty( $ansp_groups ) ) {
  * @param array<string,string> $ansp_tabs tab id => label.
  */
 $ansp_tabs = apply_filters( 'ansp_portal_tabs', $ansp_tabs );
+
+/*
+ * My Bio to the far right, enforced after the filter.
+ *
+ * Comp Tickets is added by ans-comp-tickets through the filter above, so
+ * ordering the array literal alone would still have left My Bio to the left
+ * of it. Re-inserting the key moves it to the end of the array — PHP keeps
+ * insertion order — without this file needing to know which other plugins
+ * added tabs or in what order.
+ */
+if ( isset( $ansp_tabs['bio'] ) ) {
+	$ansp_bio_label = $ansp_tabs['bio'];
+	unset( $ansp_tabs['bio'] );
+	$ansp_tabs['bio'] = $ansp_bio_label;
+}
 ?>
 <div class="ansp-portal" id="ansp-portal">
 
@@ -151,11 +182,28 @@ $ansp_tabs = apply_filters( 'ansp_portal_tabs', $ansp_tabs );
 			/*
 			 * materials-<group-slug> tabs all render the same template,
 			 * scoped to their group. Everything else maps to tab-<id>.php.
+			 *
+			 * Since 1.32.0 that template is tab-group.php, which wraps the
+			 * materials list in three sub-tabs — assignments, materials,
+			 * calendar — rather than being the materials list itself.
+			 * tab-season-materials.php is unchanged and still does the actual
+			 * work; it is now included from inside the wrapper.
 			 */
-			if ( 0 === strpos( $ansp_tab_id, 'materials-' ) ) {
+			if ( 0 === strpos( $ansp_tab_id, 'materials-' ) || 'season-materials' === $ansp_tab_id ) {
+				/*
+				 * 'season-materials' is the unscoped fallback for a viewer in
+				 * no group at all. It goes through the same wrapper with an
+				 * empty slug so they get Assignments alongside their
+				 * materials; tab-group.php omits the Calendar sub-tab when
+				 * there is no group to have one.
+				 */
 				ansp_get_template(
-					'tab-season-materials',
-					array( 'ansp_group_slug' => substr( $ansp_tab_id, strlen( 'materials-' ) ) )
+					'tab-group',
+					array(
+						'ansp_group_slug' => 'season-materials' === $ansp_tab_id
+							? ''
+							: substr( $ansp_tab_id, strlen( 'materials-' ) ),
+					)
 				);
 			} else {
 				ansp_get_template( 'tab-' . $ansp_tab_id );

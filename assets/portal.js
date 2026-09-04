@@ -346,7 +346,28 @@
 			updateSelection();
 		} );
 
-		// ---- Project sub-tabs (delegated: one handler per container) -----
+		// ---- Sub-tabs (delegated: one handler per container) --------------
+		/*
+		 * SUB-TAB GROUPS NEST, and that is why `own()` exists.
+		 *
+		 * Since 1.32.0 an ensemble tab is itself a [data-ansp-subtabs]
+		 * container (Assignments / Program Materials / Calendar), and the
+		 * per-project switcher inside Program Materials is a second one. A
+		 * plain container.querySelectorAll() reaches through into the nested
+		 * container, so clicking a PROJECT would also have deactivated the
+		 * three outer sub-tabs and hidden their panels — every project click
+		 * would have blanked the tab it was inside.
+		 *
+		 * own() keeps only the buttons and panels whose nearest
+		 * [data-ansp-subtabs] ancestor is THIS container, so each level moves
+		 * independently and a third level would work the same way.
+		 */
+		function own( container, selector ) {
+			return Array.prototype.slice.call( container.querySelectorAll( selector ) ).filter( function ( el ) {
+				return el.closest( '[data-ansp-subtabs]' ) === container;
+			} );
+		}
+
 		var subContainers = Array.prototype.slice.call( root.querySelectorAll( '[data-ansp-subtabs]' ) );
 		subContainers.forEach( function ( container ) {
 			container.addEventListener( 'click', function ( e ) {
@@ -354,14 +375,19 @@
 				if ( ! btn || ! container.contains( btn ) ) {
 					return;
 				}
+				// A click on a nested sub-tab bubbles up to this container
+				// too; the inner handler owns it, so leave it alone.
+				if ( btn.closest( '[data-ansp-subtabs]' ) !== container ) {
+					return;
+				}
 				var id = btn.getAttribute( 'data-ansp-subtab' );
 
-				Array.prototype.slice.call( container.querySelectorAll( '[data-ansp-subtab]' ) ).forEach( function ( b ) {
+				own( container, '[data-ansp-subtab]' ).forEach( function ( b ) {
 					var active = b === btn;
 					b.classList.toggle( 'is-active', active );
 					b.setAttribute( 'aria-selected', active ? 'true' : 'false' );
 				} );
-				Array.prototype.slice.call( container.querySelectorAll( '[data-ansp-subpanel]' ) ).forEach( function ( panel ) {
+				own( container, '[data-ansp-subpanel]' ).forEach( function ( panel ) {
 					var active = panel.getAttribute( 'data-ansp-subpanel' ) === id;
 					panel.classList.toggle( 'is-active', active );
 					if ( active ) {

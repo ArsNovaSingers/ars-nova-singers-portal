@@ -3,6 +3,17 @@
  * Calendar tab: Google Calendar embeds for the viewer's group(s) with
  * one-click Subscribe (Google / iCal) links.
  *
+ * ⚠️ NO LONGER ROUTED TO as of 1.32.0. Calendars moved inside the ensemble
+ * tab they belong to — templates/group-calendar.php renders one calendar,
+ * chosen by the tab it sits in. portal.php no longer registers a `calendar`
+ * tab, so nothing includes this file.
+ *
+ * Kept rather than deleted, on the same footing as tab-past-projects.php:
+ * restoring the old behaviour is re-adding one line to the $ansp_tabs array,
+ * and ANSP_Calendar::get_calendars_for_user() — which this uses — is still
+ * live and still correct. Delete both together if the multi-calendar view is
+ * ever formally dropped.
+ *
  * @package ArsNovaSingersPortal
  */
 

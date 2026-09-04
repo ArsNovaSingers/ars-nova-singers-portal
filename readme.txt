@@ -4,7 +4,7 @@ Tags: members, portal, choir, private, materials
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.34.0
+Stable tag: 1.35.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -71,7 +71,7 @@ Since 1.2.0 there are no per-material grants: any logged-in portal member sees e
 
 == Changelog ==
 
-= Unreleased =
+= 1.35.0 =
 * **New read-only route `GET ars-nova/v1 portal/notifications`** - the current switch state and the send log, plus, with `?project_id=`, exactly who WOULD be emailed about that project without sending anything. Added because after 1.34.0 stopped the unwanted emails there was still no way to *observe* that it had, or to answer the question singers were actually asking on 2026-09-04: "did I get one?". Reading a fix is not the same as verifying it.
 
 

@@ -71,6 +71,14 @@ Since 1.2.0 there are no per-material grants: any logged-in portal member sees e
 
 == Changelog ==
 
+= Unreleased =
+* **The portal is called the Singers Hub.** The heading read "Ars Nova Portal", duplicating the WordPress page title above it. The theme's page title is hidden per-page (`_kad_post_title` = `hide`); install this where that setting has not been applied and the duplicate heading comes back — that is the setting, not this plugin.
+* **Calendars now live inside the ensemble tab they belong to**, as a Calendar sub-tab, instead of a separate Calendar tab that stacked every calendar the viewer could see. A singer in two ensembles no longer has to work out which embed applies to the music in front of them.
+* **Calendar settings are derived from your ensembles instead of three hardcoded slots.** The old fixed slots were `main`, `small` and `friday` — group slugs that no longer exist on this site. Because `get_calendars_for_user()` matches a slot's slug against the viewer's own groups, a slug nobody holds can never match: **every singer had an empty Calendar tab, and the settings screen offered three fields that could not reach anybody.** Nothing errored, which is why it went unnoticed. One field per tab-making ensemble now appears by itself, and matching uses effective group slugs so an Ensemble Singer resolves to the Ars Nova calendar rather than to nothing.
+* **Each ensemble tab now has three sub-tabs: This Week's Assignments, Program Materials, Calendar.** Assignments are materials tagged `assignment` (substring, case-insensitive, so `_Assignment` matches) — the convention Tom already uses. Tags filter a list the permission engine has already approved for this viewer; they never widen access.
+* **My Bio is the right-most tab**, moved there after the `ansp_portal_tabs` filter runs so a tab added by another plugin cannot land beyond it.
+* **Fixed: nested sub-tabs would have broken each other.** The sub-tab handler matched every descendant of its container, so with one sub-tab group inside another, clicking a project would also have deactivated the outer sections and hidden their panels. Buttons and panels now resolve against their nearest `[data-ansp-subtabs]` ancestor.
+
 = 1.29.2 =
 * **Fixed: "+ Add a note for them" and the row's remove button were invisible.** Both were rendering white text on a white card. Kadence styles every bare `<button>` with `color: var(--global-palette-btn)`, which resolves to `#ffffff`; these two rules killed the theme's blue background but never set a colour of their own, so the text inherited white. The buttons were present, focusable and clickable the whole time - which is why clearing caches changed nothing and why the note field looked like it had never shipped.
 * The hover and focus states set the colour again deliberately: Kadence's `button:hover` out-specifies a plain class selector, so without it the text turned white again the moment the pointer arrived.

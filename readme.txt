@@ -71,6 +71,25 @@ Since 1.2.0 there are no per-material grants: any logged-in portal member sees e
 
 == Changelog ==
 
+= Unreleased =
+* **Roster photos are no longer blurry.** The card rendered a hand-written `<img src>` pointing at WordPress's `medium` size, which caps the long edge at 300px, inside a grid cell about 360px wide - so every photo was being stretched past its own resolution on an ordinary laptop, and to roughly two and a half times on any retina display. Photos now render through `wp_get_attachment_image()`, which emits a srcset of every size the upload actually has, with a `sizes` attribute matching the three-column grid. Nothing needs regenerating: the fix uses stock sizes that already exist for every image on the site.
+* **A roster bio is now a four-line teaser with a "Read more about ..." link to that singer's page.** It was previously the full bio rendered as a `<dd>`, which inherits `display: inline` - so one long bio stretched its card to several times the height of its neighbours and broke the grid. The clamp is CSS (`-webkit-line-clamp`), not a character count, so every card ends at the same line regardless of column width or font size.
+* **The Roster tab moved to the far right, after My Bio.** Both are reference tabs a singer opens occasionally; the ensemble tabs they open before a rehearsal now come first. Enforced after the `ansp_portal_tabs` filter so another plugin's tab cannot land beyond them.
+* **This Week's Assignments now surfaces re-issued sheet music on its own.** A mirror row carries an `Updated` tag when the scores worker publishes a new version of a score - that is exactly the event "Tom issued a new PDF" - and the assignments filter now matches it alongside `assignment`. Previously a revised score only appeared if somebody also remembered to hand-tag it.
+* **New per-project field: Singers' Hub doc.** Tom's running document for a project, the one he updates with each week's PDFs, click tracks and rehearsal recordings. When set it renders at the top of This Week's Assignments as a card linking straight to it. Settable in the Project Details box and via `save_project` (`hub_doc_url`). Note the limit: the doc is linked, not parsed - it lives on a shared Drive and the portal deliberately holds no Google credentials.
+* **New: season snapshot export and import** - `GET /portal/season/export` and `POST /portal/season/import`. A season becomes one JSON document holding the season term, the whole group tree with its Drive mappings and tab flags, and every project with its terms, meta, mirror mapping and materials. Written the day the LIVE site was found with every project but one stripped of its season and its groups, which left the entire choir looking at an empty portal and no way to answer "what did this look like yesterday?". Identity is by slug, never by ID, so a snapshot moves between LIVE and staging. **Import is dry-run by default** and never deletes: it creates and updates, and reports anything present here but absent from the snapshot rather than removing it. `?all_projects=1` on export also captures projects that have lost their season - without it a season-scoped export would back up the symptom instead of the content.
+* Changelog entries for 1.30.0, 1.30.1 and 1.31.0 restored below; those three release commits shipped code but never updated this file, and `Stable tag` sat at 1.29.2 through all of them.
+
+= 1.31.0 =
+* **A venue can hold a private address, and it reaches tickets by itself.** Reconstructed from the release commit; see `includes/class-ansp-event-venue.php`.
+
+= 1.30.1 =
+* **`save_project` can set the WordPress post status.** `ans_project` is registered `show_in_rest => false`, so `wp/v2` cannot reach it and the portal's own project writer had no way to publish a project - auto-created projects arrived as drafts nothing but wp-admin could ever publish. Adds a `post_status` parameter, named separately from `status` because that one already writes the portal's own active/archived flag.
+
+= 1.30.0 =
+* **Performances know their venue, so capacity has a path.** Reconstructed from the release commit; see `includes/class-ansp-venue.php`.
+
+
 = 1.32.0 =
 * **The portal is called the Singers Hub.** The heading read "Ars Nova Portal", duplicating the WordPress page title above it. The theme's page title is hidden per-page (`_kad_post_title` = `hide`); install this where that setting has not been applied and the duplicate heading comes back — that is the setting, not this plugin.
 * **Calendars now live inside the ensemble tab they belong to**, as a Calendar sub-tab, instead of a separate Calendar tab that stacked every calendar the viewer could see. A singer in two ensembles no longer has to work out which embed applies to the music in front of them.

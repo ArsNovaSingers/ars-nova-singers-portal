@@ -2,7 +2,7 @@
 /**
  * Portal shell: accessible, mobile-first tabbed interface.
  *
- * Tabs: Home/Announcements · Roster · one per ensemble · My Bio (last).
+ * Tabs: Home/Announcements · one per ensemble · My Bio · Roster (last two).
  * (Past Projects is built but hidden.) Each ensemble tab holds three
  * sub-tabs — This Week's Assignments, Program Materials, Calendar — see
  * templates/tab-group.php. Tab switching is handled by assets/portal.js
@@ -108,18 +108,28 @@ if ( empty( $ansp_groups ) ) {
 $ansp_tabs = apply_filters( 'ansp_portal_tabs', $ansp_tabs );
 
 /*
- * My Bio to the far right, enforced after the filter.
+ * The two reference tabs pinned to the far right, enforced after the filter.
  *
  * Comp Tickets is added by ans-comp-tickets through the filter above, so
- * ordering the array literal alone would still have left My Bio to the left
- * of it. Re-inserting the key moves it to the end of the array — PHP keeps
+ * ordering the array literal alone would still have left these to the left
+ * of it. Re-inserting a key moves it to the end of the array — PHP keeps
  * insertion order — without this file needing to know which other plugins
  * added tabs or in what order.
+ *
+ * ORDER IS THE ARRAY ORDER BELOW, and it is the reason this is a list rather
+ * than two copies of the same three lines: whichever key is re-inserted LAST
+ * ends up furthest right. Jonathan, 2026-09-04: "move the Roster tab to the
+ * right of the Bio tab. So LAST."
+ *
+ * Both are things a singer opens occasionally and reads — their own details,
+ * and everyone else's. The tabs they open before a rehearsal come first.
  */
-if ( isset( $ansp_tabs['bio'] ) ) {
-	$ansp_bio_label = $ansp_tabs['bio'];
-	unset( $ansp_tabs['bio'] );
-	$ansp_tabs['bio'] = $ansp_bio_label;
+foreach ( array( 'bio', 'roster' ) as $ansp_pin ) {
+	if ( isset( $ansp_tabs[ $ansp_pin ] ) ) {
+		$ansp_pin_label = $ansp_tabs[ $ansp_pin ];
+		unset( $ansp_tabs[ $ansp_pin ] );
+		$ansp_tabs[ $ansp_pin ] = $ansp_pin_label;
+	}
 }
 ?>
 <div class="ansp-portal" id="ansp-portal">

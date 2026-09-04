@@ -96,10 +96,14 @@ class ANSP_REST {
 	/**
 	 * Gate a destructive call on production behind an explicit flag.
 	 *
+	 * PUBLIC, not protected: ANSP_Season_IO's import route is destructive in
+	 * exactly the same way and must clear exactly the same bar. Duplicating the
+	 * check there would mean two production guards that can disagree.
+	 *
 	 * @param WP_REST_Request $req Request.
 	 * @return true|WP_Error
 	 */
-	protected static function guard( $req ) {
+	public static function guard( $req ) {
 		if ( ! self::is_production() ) {
 			return true;
 		}
@@ -441,6 +445,7 @@ class ANSP_REST {
 			'venue'       => ANSP_Project_Meta::get( $id, 'venue' ),
 			'description' => ANSP_Project_Meta::get( $id, 'description' ),
 			'brief_url'   => ANSP_Project_Meta::get( $id, 'brief_url' ),
+			'hub_doc_url' => ANSP_Project_Meta::get( $id, 'hub_doc_url' ),
 			'project_status' => ANSP_Project_Meta::get( $id, 'status' ),
 			'material_count' => count( ANSP_Materials::get_materials( $id ) ),
 		);
@@ -523,7 +528,7 @@ class ANSP_REST {
 			return new WP_Error( 'ansp_not_project', 'Not a project.', array( 'status' => 404 ) );
 		}
 
-		foreach ( array( 'date_start', 'date_end', 'venue', 'description', 'brief_url', 'status' ) as $key ) {
+		foreach ( array( 'date_start', 'date_end', 'venue', 'description', 'brief_url', 'hub_doc_url', 'status' ) as $key ) {
 			$val = $req->get_param( $key );
 			if ( null !== $val ) {
 				update_post_meta( $id, 'ansp_project_' . $key, sanitize_text_field( (string) $val ) );

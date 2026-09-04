@@ -40,6 +40,19 @@ $ansp_viewer_id  = get_current_user_id();
  * and `Week 3 Assignment` all land. Deliberately generous: a missed
  * assignment is a singer arriving unprepared, while a false positive is one
  * extra row in a short list. The costs are not symmetrical.
+ *
+ * `updated` MATCHES TOO, and that is the point of it. ANSP_Scores_Source tags
+ * a mirror row "Updated" when the worker publishes a new version of a score —
+ * which is precisely the event "Tom issued a new PDF". Before this, a singer
+ * only saw a re-issued score if somebody also remembered to hand-tag it, and
+ * nobody ever did. This makes the newest sheet music surface here on its own,
+ * with no habit for Tom to acquire.
+ *
+ * Note what this still does NOT do: it cannot read the Singers' Hub doc and
+ * pull the PDF links out of it. Those links live inside a Google Doc on a
+ * shared drive, and the portal holds no Google credentials — by design, that
+ * is the whole reason the scores worker exists. So the doc is LINKED rather
+ * than parsed; see the Hub card below.
  */
 if ( ! function_exists( 'ansp_row_is_assignment' ) ) {
 	function ansp_row_is_assignment( $row ) {
@@ -51,7 +64,8 @@ if ( ! function_exists( 'ansp_row_is_assignment' ) ) {
 			return false;
 		}
 		foreach ( $tags as $tag ) {
-			if ( false !== stripos( (string) $tag, 'assignment' ) ) {
+			$tag = (string) $tag;
+			if ( false !== stripos( $tag, 'assignment' ) || false !== stripos( $tag, 'updated' ) ) {
 				return true;
 			}
 		}
@@ -110,12 +124,29 @@ if ( ! empty( $ansp_a_tax ) ) {
 
 $ansp_a_query = new WP_Query( $ansp_a_args );
 $ansp_a_found = array();
+$ansp_a_hubs  = array();
 
 foreach ( $ansp_a_query->posts as $ansp_a_project ) {
 	if ( ! ansp_user_can_see( $ansp_a_project, $ansp_viewer_id ) ) {
 		continue;
 	}
-	$ansp_a_pid  = (int) $ansp_a_project->ID;
+	$ansp_a_pid = (int) $ansp_a_project->ID;
+
+	/*
+	 * The Singers' Hub doc for this project, if Tom's is recorded on it.
+	 * Gathered inside the SAME permission-checked loop as the materials so a
+	 * singer can never be shown the hub doc of a project they cannot see.
+	 */
+	$ansp_a_hub = class_exists( 'ANSP_Project_Meta' )
+		? ANSP_Project_Meta::get( $ansp_a_pid, 'hub_doc_url' )
+		: '';
+	if ( '' !== $ansp_a_hub ) {
+		$ansp_a_hubs[] = array(
+			'title' => get_the_title( $ansp_a_project ),
+			'url'   => $ansp_a_hub,
+		);
+	}
+
 	$ansp_a_rows = ANSP_Permissions::get_visible_materials( $ansp_a_pid, $ansp_viewer_id );
 	$ansp_a_hits = array_values( array_filter( (array) $ansp_a_rows, 'ansp_row_is_assignment' ) );
 	if ( $ansp_a_hits ) {
@@ -127,7 +158,30 @@ foreach ( $ansp_a_query->posts as $ansp_a_project ) {
 }
 ?>
 
-<?php if ( empty( $ansp_a_found ) ) : ?>
+<?php if ( ! empty( $ansp_a_hubs ) ) : ?>
+	<?php foreach ( $ansp_a_hubs as $ansp_a_hub_item ) : ?>
+		<section class="ansp-hub-doc">
+			<h4 class="ansp-hub-doc-title"><?php esc_html_e( "This week, from Tom", 'ans-singers-portal' ); ?></h4>
+			<p class="ansp-hub-doc-note">
+				<?php
+				printf(
+					/* translators: %s: project title */
+					esc_html__( "The Singers' Hub document for %s is where the current PDFs, click tracks and rehearsal recordings are posted. It is updated as the week goes.", 'ans-singers-portal' ),
+					esc_html( $ansp_a_hub_item['title'] )
+				);
+				?>
+			</p>
+			<p>
+				<a class="ansp-btn" href="<?php echo esc_url( $ansp_a_hub_item['url'] ); ?>" target="_blank" rel="noopener noreferrer">
+					<?php esc_html_e( "Open the Singers' Hub", 'ans-singers-portal' ); ?>
+				</a>
+			</p>
+		</section>
+	<?php endforeach; ?>
+<?php endif; ?>
+
+
+<?php if ( empty( $ansp_a_found ) && empty( $ansp_a_hubs ) ) : ?>
 	<p class="ansp-empty">
 		<?php
 		if ( '' !== $ansp_group_name ) {
@@ -141,7 +195,7 @@ foreach ( $ansp_a_query->posts as $ansp_a_project ) {
 		}
 		?>
 	</p>
-<?php else : ?>
+<?php elseif ( ! empty( $ansp_a_found ) ) : ?>
 	<?php foreach ( $ansp_a_found as $ansp_a_block ) : ?>
 		<section class="ansp-assignment-block">
 			<h4 class="ansp-assignment-project"><?php echo esc_html( get_the_title( $ansp_a_block['project'] ) ); ?></h4>

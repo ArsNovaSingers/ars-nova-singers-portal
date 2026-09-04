@@ -414,11 +414,65 @@
 	color: var(--ansp-accent);
 }
 .ansp-roster-name { margin: 0 0 0.25rem; }
+
+/*
+ * Bio teaser: exactly four lines, then the "Read more" link below it.
+ *
+ * -webkit-line-clamp is the only thing that clamps by LINES rather than by
+ * height or character count, which is what makes every card in the grid end at
+ * the same place regardless of font size, column width or how long the bio is.
+ * The -webkit- prefix is not legacy — it is the shipped spelling in every
+ * current browser including Firefox and Safari; the unprefixed `line-clamp` is
+ * listed after it for whenever that changes.
+ *
+ * max-height is the fallback for anything that ignores the clamp: 4 lines at
+ * 1.5 line-height, with overflow hidden so it cuts rather than overlaps. It
+ * must stay in step with the clamp count and the line-height right below it.
+ */
+.ansp-roster-bio {
+	margin: 0.6rem 0 0;
+	font-size: 0.92em;
+	line-height: 1.5;
+	max-height: 6em; /* 4 lines x 1.5 */
+	overflow: hidden;
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 4;
+	line-clamp: 4;
+}
+/* The bio's own paragraph spacing would break the line box the clamp needs. */
+.ansp-roster-bio p { margin: 0; }
+.ansp-roster-bio p + p { margin-top: 0.35em; }
+
+/*
+ * Photos are square-cropped by object-fit, so the browser is always scaling a
+ * non-square source. Without this, a downscale in Chrome/Edge picks the fast
+ * path and looks softer than the same image in Safari.
+ */
+.ansp-roster-photo { image-rendering: auto; }
 .ansp-roster-fields { margin: 0.6rem 0 0; text-align: left; font-size: 0.92em; }
 .ansp-roster-field { margin-bottom: 0.4rem; }
 .ansp-roster-field dt { font-weight: 600; display: inline; }
 .ansp-roster-field dt::after { content: ": "; }
 .ansp-roster-field dd { display: inline; margin: 0; }
+
+/* ---------- This Week's Assignments: the Singers' Hub card ---------- */
+/*
+ * Deliberately loud. This is the one thing in the sub-tab that is guaranteed
+ * current — Tom edits the doc directly — so it sits above the material rows
+ * and does not look like another row.
+ */
+.ansp-hub-doc {
+	border: 1px solid var(--ansp-accent);
+	border-left-width: 4px;
+	border-radius: var(--ansp-radius);
+	background: var(--ansp-accent-soft);
+	padding: 1rem 1.15rem;
+	margin: 0 0 1.5rem;
+}
+.ansp-hub-doc-title { margin: 0 0 0.35rem; }
+.ansp-hub-doc-note { margin: 0 0 0.85rem; font-size: 0.92em; }
+.ansp-hub-doc p:last-child { margin-bottom: 0; }
 
 /* ---------- Calendar ---------- */
 .ansp-calendar-block { margin-bottom: 2rem; }

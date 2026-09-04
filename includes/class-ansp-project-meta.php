@@ -3,6 +3,7 @@
  * Project details meta box for ans_project.
  *
  * Native fields (no ACF): start/end dates, venue, description, brief link,
+ * Singers' Hub doc link,
  * status (active/archived), plus the Group checkboxes (ans_group) and a
  * Season select (ans_season) — we disabled the default taxonomy meta boxes
  * so everything lives in one tidy panel. A read-only RSVP summary is shown
@@ -89,6 +90,7 @@ class ANSP_Project_Meta {
 		$venue       = self::get( $post->ID, 'venue' );
 		$description = self::get( $post->ID, 'description' );
 		$brief_url   = self::get( $post->ID, 'brief_url' );
+		$hub_doc_url = self::get( $post->ID, 'hub_doc_url' );
 		$status      = self::get( $post->ID, 'status' );
 		$status      = array_key_exists( $status, self::statuses() ) ? $status : 'active';
 
@@ -128,6 +130,15 @@ class ANSP_Project_Meta {
 				<td>
 					<input type="url" class="regular-text" id="ansp_project_brief_url" name="ansp_project_brief_url" value="<?php echo esc_url( $brief_url ); ?>" placeholder="https://" />
 					<p class="description"><?php esc_html_e( 'Google Doc / Drive link to the project brief.', 'ans-singers-portal' ); ?></p>
+				</td>
+			</tr>
+			<tr>
+				<th scope="row"><label for="ansp_project_hub_doc_url"><?php esc_html_e( "Singers' Hub doc", 'ans-singers-portal' ); ?></label></th>
+				<td>
+					<input type="url" class="regular-text" id="ansp_project_hub_doc_url" name="ansp_project_hub_doc_url" value="<?php echo esc_url( $hub_doc_url ); ?>" placeholder="https://docs.google.com/document/d/..." />
+					<p class="description">
+						<?php esc_html_e( "Tom's running Singers' Hub document for this project — the one he updates with each week's PDFs and recordings. When this is set it becomes the first thing in the This Week's Assignments sub-tab.", 'ans-singers-portal' ); ?>
+					</p>
 				</td>
 			</tr>
 			<tr>
@@ -238,6 +249,13 @@ class ANSP_Project_Meta {
 			update_post_meta( $post_id, 'ansp_project_brief_url', $brief );
 		} else {
 			delete_post_meta( $post_id, 'ansp_project_brief_url' );
+		}
+
+		$hub_doc = isset( $_POST['ansp_project_hub_doc_url'] ) ? esc_url_raw( wp_unslash( $_POST['ansp_project_hub_doc_url'] ) ) : '';
+		if ( '' !== $hub_doc ) {
+			update_post_meta( $post_id, 'ansp_project_hub_doc_url', $hub_doc );
+		} else {
+			delete_post_meta( $post_id, 'ansp_project_hub_doc_url' );
 		}
 
 		$status = isset( $_POST['ansp_project_status'] ) ? sanitize_key( wp_unslash( $_POST['ansp_project_status'] ) ) : 'active';

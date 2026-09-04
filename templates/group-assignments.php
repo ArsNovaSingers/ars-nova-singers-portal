@@ -125,6 +125,7 @@ if ( ! empty( $ansp_a_tax ) ) {
 $ansp_a_query = new WP_Query( $ansp_a_args );
 $ansp_a_found = array();
 $ansp_a_hubs  = array();
+$ansp_a_notes = array();
 
 foreach ( $ansp_a_query->posts as $ansp_a_project ) {
 	if ( ! ansp_user_can_see( $ansp_a_project, $ansp_viewer_id ) ) {
@@ -148,15 +149,149 @@ foreach ( $ansp_a_query->posts as $ansp_a_project ) {
 	}
 
 	$ansp_a_rows = ANSP_Permissions::get_visible_materials( $ansp_a_pid, $ansp_viewer_id );
-	$ansp_a_hits = array_values( array_filter( (array) $ansp_a_rows, 'ansp_row_is_assignment' ) );
+
+	/*
+	 * Rehearsal notes are pulled OUT of the ordinary assignment list and shown
+	 * on their own above it. They are not tagged and never will be — they arrive
+	 * from a mirror sub-folder, and the folder is what types them — so they would
+	 * otherwise never reach this panel at all.
+	 */
+	$ansp_a_hits = array();
+	foreach ( (array) $ansp_a_rows as $ansp_a_row ) {
+		$ansp_a_type = isset( $ansp_a_row['type'] ) ? (string) $ansp_a_row['type'] : '';
+		if ( 'rehearsal_note' === $ansp_a_type ) {
+			$ansp_a_row['project_title'] = get_the_title( $ansp_a_project );
+			$ansp_a_row['project_id']    = $ansp_a_pid;
+			$ansp_a_notes[]              = $ansp_a_row;
+			continue;
+		}
+		if ( ansp_row_is_assignment( $ansp_a_row ) ) {
+			$ansp_a_hits[] = $ansp_a_row;
+		}
+	}
+
 	if ( $ansp_a_hits ) {
 		$ansp_a_found[] = array(
 			'project' => $ansp_a_project,
-			'rows'    => $ansp_a_hits,
+			'rows'    => array_values( $ansp_a_hits ),
 		);
 	}
 }
+
+/*
+ * Newest first. A note with no readable date sorts last rather than vanishing —
+ * an unreadable date is a naming slip, not a reason to hide a singer's notes.
+ */
+usort(
+	$ansp_a_notes,
+	static function ( $a, $b ) {
+		$da = isset( $a['rehearsal_date'] ) ? (string) $a['rehearsal_date'] : '';
+		$db = isset( $b['rehearsal_date'] ) ? (string) $b['rehearsal_date'] : '';
+		if ( $da === $db ) {
+			return 0;
+		}
+		if ( '' === $da ) {
+			return 1;
+		}
+		if ( '' === $db ) {
+			return -1;
+		}
+		return strcmp( $db, $da );
+	}
+);
+
+$ansp_a_latest   = ! empty( $ansp_a_notes ) ? array_shift( $ansp_a_notes ) : null;
+$ansp_a_previous = $ansp_a_notes;
+
+/**
+ * A rehearsal note's date, formatted for display, or its title as a fallback.
+ *
+ * @param array $note One note row.
+ * @return string
+ */
+if ( ! function_exists( 'ansp_note_label' ) ) {
+	function ansp_note_label( $note ) {
+		$date = isset( $note['rehearsal_date'] ) ? (string) $note['rehearsal_date'] : '';
+		if ( '' !== $date ) {
+			$stamp = strtotime( $date . ' 12:00:00' );
+			if ( $stamp ) {
+				return wp_date( get_option( 'date_format' ), $stamp );
+			}
+		}
+		return isset( $note['title'] ) ? (string) $note['title'] : '';
+	}
+}
 ?>
+
+<?php if ( null !== $ansp_a_latest ) : ?>
+	<section class="ansp-notes">
+		<h4 class="ansp-notes-title">
+			<?php esc_html_e( 'Rehearsal notes', 'ans-singers-portal' ); ?>
+			<span class="ansp-notes-date"><?php echo esc_html( ansp_note_label( $ansp_a_latest ) ); ?></span>
+		</h4>
+
+		<?php if ( ! empty( $ansp_a_latest['url'] ) ) : ?>
+			<?php
+			/*
+			 * The newest note is rendered in the page rather than linked.
+			 *
+			 * ⚠️ This is a deliberate, NARROW exception to the v1.14.0 decision
+			 * that stripped every inline preview from material-item.php. That
+			 * decision was right about scores: twelve stacked iframes pushed the
+			 * real links off the screen. It does not hold for a single document
+			 * that a singer is meant to READ on arrival. Exactly one note is
+			 * embedded, on one sub-tab. Do not generalise this.
+			 *
+			 * The src is the durable score link, which 302s to a freshly signed
+			 * mirror URL — so nothing here expires and no credential is in the
+			 * markup. If the browser or storage declines to display it inline,
+			 * the buttons below still work; that is why they are not hidden
+			 * behind the embed.
+			 */
+			?>
+			<div class="ansp-note-embed">
+				<iframe src="<?php echo esc_url( $ansp_a_latest['url'] ); ?>"
+					title="<?php echo esc_attr( sprintf( /* translators: %s: rehearsal date */ __( 'Rehearsal notes, %s', 'ans-singers-portal' ), ansp_note_label( $ansp_a_latest ) ) ); ?>"
+					loading="lazy"></iframe>
+			</div>
+			<p class="ansp-note-actions">
+				<a class="ansp-btn" href="<?php echo esc_url( $ansp_a_latest['url'] ); ?>" target="_blank" rel="noopener noreferrer">
+					<?php esc_html_e( 'Open in a new tab', 'ans-singers-portal' ); ?>
+				</a>
+				<span class="ansp-note-hint">
+					<?php esc_html_e( 'If the notes do not appear above, open them here.', 'ans-singers-portal' ); ?>
+				</span>
+			</p>
+		<?php endif; ?>
+
+		<?php if ( ! empty( $ansp_a_previous ) ) : ?>
+			<details class="ansp-notes-history">
+				<summary>
+					<?php
+					printf(
+						/* translators: %d: number of earlier rehearsal notes */
+						esc_html( _n( '%d earlier note', '%d earlier notes', count( $ansp_a_previous ), 'ans-singers-portal' ) ),
+						count( $ansp_a_previous )
+					);
+					?>
+				</summary>
+				<ul class="ansp-notes-list">
+					<?php foreach ( $ansp_a_previous as $ansp_a_note ) : ?>
+						<li>
+							<?php if ( ! empty( $ansp_a_note['url'] ) ) : ?>
+								<a href="<?php echo esc_url( $ansp_a_note['url'] ); ?>" target="_blank" rel="noopener noreferrer">
+									<?php echo esc_html( ansp_note_label( $ansp_a_note ) ); ?>
+								</a>
+							<?php else : ?>
+								<?php echo esc_html( ansp_note_label( $ansp_a_note ) ); ?>
+							<?php endif; ?>
+						</li>
+					<?php endforeach; ?>
+				</ul>
+			</details>
+		<?php endif; ?>
+	</section>
+<?php endif; ?>
 
 <?php if ( ! empty( $ansp_a_hubs ) ) : ?>
 	<?php foreach ( $ansp_a_hubs as $ansp_a_hub_item ) : ?>
@@ -181,7 +316,7 @@ foreach ( $ansp_a_query->posts as $ansp_a_project ) {
 <?php endif; ?>
 
 
-<?php if ( empty( $ansp_a_found ) && empty( $ansp_a_hubs ) ) : ?>
+<?php if ( empty( $ansp_a_found ) && empty( $ansp_a_hubs ) && null === $ansp_a_latest ) : ?>
 	<p class="ansp-empty">
 		<?php
 		if ( '' !== $ansp_group_name ) {

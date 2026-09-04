@@ -71,6 +71,13 @@ Since 1.2.0 there are no per-material grants: any logged-in portal member sees e
 
 == Changelog ==
 
+= Unreleased =
+* **Rehearsal notes now reach singers, on This Week's Assignments.** The newest note is rendered in the page; earlier ones collapse into a short list underneath, newest first. Until now that sub-tab matched on tags only, and nothing published through the mirror carried a tag, so it rendered empty for every group.
+* **A project can read from more than one mirror folder.** The Sheet-Music Mirror field takes one address per line. A production is not one folder: Rivers & Streams keeps its scores in the scanned root and its rehearsal notes in a `RehearsalNotes` sub-folder. A single-line value behaves exactly as before.
+* **Files in a `RehearsalNotes` folder are typed as rehearsal notes, not sheet music.** The worker has no concept of a file type — every object it publishes is structurally a score — so the folder is the only signal available. This is why the notes must stay in their own sub-folder rather than being moved in with the music.
+* Notes are ordered by the date in the filename (`ANS-0903notes` = 3 September), which matched Drive's created dates exactly. The worker's `published_at` is deliberately NOT the sort key: four notes added over three weeks were picked up in one scan, so their publish stamps are identical and sort arbitrarily. It remains a fallback, and a note with no readable date sorts last rather than disappearing.
+* Note the narrow exception: 1.14.0 removed every inline preview from `material-item.php`, and rightly — stacked score iframes pushed the real links off screen. Exactly one rehearsal note is embedded, on one sub-tab, with working Open buttons beneath it in case the browser declines to display it. Do not generalise it back out.
+
 = 1.35.0 =
 * **New read-only route `GET ars-nova/v1 portal/notifications`** - the current switch state and the send log, plus, with `?project_id=`, exactly who WOULD be emailed about that project without sending anything. Added because after 1.34.0 stopped the unwanted emails there was still no way to *observe* that it had, or to answer the question singers were actually asking on 2026-09-04: "did I get one?". Reading a fix is not the same as verifying it.
 

@@ -108,6 +108,54 @@ class ANSP_Notifications {
 	}
 
 	/**
+	 * Read the send log and the current switch state.
+	 *
+	 * A READ-ONLY route, deliberately. Turning notifications on or off goes
+	 * through `portal/settings` like every other option; this exists so the
+	 * question that had no answer on 2026-09-04 — "who was emailed about what,
+	 * and when?" — can be asked without database access.
+	 *
+	 * With `?project_id=` it also reports who WOULD be emailed about that
+	 * project, without sending anything. That is the check to run before
+	 * turning the switch back on.
+	 *
+	 * @param WP_REST_Request $req Request.
+	 * @return array
+	 */
+	public function rest_read( $req ) {
+		$log = get_option( self::OPT_LOG, array() );
+		if ( ! is_array( $log ) ) {
+			$log = array();
+		}
+
+		$out = array(
+			'enabled'    => self::is_enabled(),
+			'option'     => self::OPT_ENABLED,
+			'note'       => self::is_enabled()
+				? 'Notifications are ON. A save with the box ticked will email singers.'
+				: 'Notifications are OFF. Nothing in this plugin will email a singer.',
+			'automatic'  => false,
+			'automatic_note' => 'Publishing a project never emails anyone. Removed in 1.34.0.',
+			'log_count'  => count( $log ),
+			'log'        => array_slice( $log, 0, 20 ),
+		);
+
+		$project_id = (int) $req->get_param( 'project_id' );
+		if ( $project_id ) {
+			$recipients = self::get_recipients( $project_id );
+			$out['preview'] = array(
+				'project_id' => $project_id,
+				'title'      => get_the_title( $project_id ),
+				'would_email' => count( $recipients ),
+				'recipients'  => $recipients,
+				'note'        => 'Nothing was sent. This is who would be emailed if somebody ticked the box.',
+			);
+		}
+
+		return $out;
+	}
+
+	/**
 	 * Hook meta box, save handler and first-publish trigger.
 	 */
 	public function __construct() {
@@ -120,6 +168,21 @@ class ANSP_Notifications {
 		 * published a project, including bulk imports. Leaving the absence
 		 * commented so nobody re-adds it thinking it was an oversight.
 		 */
+
+		add_action(
+			'rest_api_init',
+			function () {
+				register_rest_route(
+					'ars-nova/v1',
+					'/portal/notifications',
+					array(
+						'methods'             => 'GET',
+						'permission_callback' => array( 'ANSP_REST', 'can_manage' ),
+						'callback'            => array( $this, 'rest_read' ),
+					)
+				);
+			}
+		);
 	}
 
 	/**

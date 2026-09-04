@@ -4,7 +4,7 @@ Tags: members, portal, choir, private, materials
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.33.0
+Stable tag: 1.34.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -71,7 +71,7 @@ Since 1.2.0 there are no per-material grants: any logged-in portal member sees e
 
 == Changelog ==
 
-= Unreleased =
+= 1.34.0 =
 * **Publishing a project no longer emails the choir.** This class hooked `transition_post_status` and mailed every singer who could see a project the first time it reached `publish` - automatically, with no opt-in, no preview and no record. That hook fires on every path that publishes a project: the wp-admin editor, the `portal/projects` REST writer, a season-snapshot import, WP-CLI, any plugin calling `wp_insert_post()`. Several of those are things a maintenance script does in bulk, and singers were getting mail for each one. Reported by Jonathan 2026-09-04 after complaints at rehearsal. **An email is now only ever sent because a person ticked the box on the project screen.**
 * **New master switch, `ansp_notify_enabled`, and it ships OFF.** Readable and writable through `portal/settings`, so if anything ever mails the choir unexpectedly again it can be stopped with one API call instead of a release. The check lives inside `notify_project()` - the only method that can reach `wp_mail()` - rather than at its callers, so a future caller cannot route around it.
 * **The project screen now says how many singers an email would reach, before you tick the box**, and says plainly that publishing never emails anyone on its own.

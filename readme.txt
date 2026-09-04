@@ -4,7 +4,7 @@ Tags: members, portal, choir, private, materials
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.32.0
+Stable tag: 1.33.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -71,7 +71,7 @@ Since 1.2.0 there are no per-material grants: any logged-in portal member sees e
 
 == Changelog ==
 
-= Unreleased =
+= 1.33.0 =
 * **Roster photos are no longer blurry.** The card rendered a hand-written `<img src>` pointing at WordPress's `medium` size, which caps the long edge at 300px, inside a grid cell about 360px wide - so every photo was being stretched past its own resolution on an ordinary laptop, and to roughly two and a half times on any retina display. Photos now render through `wp_get_attachment_image()`, which emits a srcset of every size the upload actually has, with a `sizes` attribute matching the three-column grid. Nothing needs regenerating: the fix uses stock sizes that already exist for every image on the site.
 * **A roster bio is now a four-line teaser with a "Read more about ..." link to that singer's page.** It was previously the full bio rendered as a `<dd>`, which inherits `display: inline` - so one long bio stretched its card to several times the height of its neighbours and broke the grid. The clamp is CSS (`-webkit-line-clamp`), not a character count, so every card ends at the same line regardless of column width or font size.
 * **The Roster tab moved to the far right, after My Bio.** Both are reference tabs a singer opens occasionally; the ensemble tabs they open before a rehearsal now come first. Enforced after the `ansp_portal_tabs` filter so another plugin's tab cannot land beyond them.

@@ -56,8 +56,24 @@ class ANSP_Scores_Source {
 	const CONST_URL     = 'ANSP_SCORES_URL';
 	const CONST_TOKEN   = 'ANSP_SCORES_TOKEN';
 
-	/** Per-project meta naming the worker-side project this WP project maps to. */
+	/**
+	 * Per-project meta naming the worker-side folder(s) this WP project maps to.
+	 *
+	 * ONE FIELD PER MATERIAL TYPE (2026-09-04, HUB-19).
+	 * The worker has no concept of a file type — every object it publishes is
+	 * structurally a score — so something on this side has to say what a folder
+	 * contains. The first attempt inferred it from the folder's NAME, matching
+	 * `RehearsalNotes` with a regex. That was rejected, correctly: it breaks
+	 * silently the day someone names a folder "Notes", and it makes a naming
+	 * convention load-bearing for no reason. The folder's type is now stated
+	 * outright, per project, in its own field.
+	 *
+	 * META_PROJECT keeps its original name and meaning so every value already
+	 * saved on a project keeps working untouched.
+	 */
 	const META_PROJECT  = 'ansp_scores_project';
+	const META_NOTES    = 'ansp_notes_project';
+	const META_AUDIO    = 'ansp_audio_project';
 
 	/**
 	 * Bumped whenever the worker URL or token changes.
@@ -253,7 +269,7 @@ class ANSP_Scores_Source {
 		$seen  = array();
 		$added = array();
 
-		foreach ( static::mirror_targets( $project_id ) as $target ) {
+		foreach ( static::all_mirror_targets( $project_id ) as $target ) {
 			$wanted_project = $target['project'];
 			foreach ( $target['groups'] as $group_slug ) {
 				foreach ( static::library( $group_slug ) as $score ) {
@@ -268,7 +284,7 @@ class ANSP_Scores_Source {
 						continue;
 					}
 					$seen[ $score['work_id'] ] = true;
-					$added[]                   = self::to_material_row( $score, $group_slug, $project_id );
+					$added[]                   = self::to_material_row( $score, $group_slug, $project_id, $target['kind'] );
 				}
 			}
 		}
@@ -302,10 +318,8 @@ class ANSP_Scores_Source {
 	 * ONE PROJECT, SEVERAL ADDRESSES (added 2026-09-04, HUB-19).
 	 * A production is not always one mirror folder. Rivers & Streams keeps its
 	 * scores loose in the scanned root (`ans/_root`) and its rehearsal notes in a
-	 * sub-folder (`ans/RehearsalNotes`) — two addresses, one project, and the
-	 * sub-folder is the ONLY thing that distinguishes a note from a score,
-	 * because the worker has no concept of a file type. So this field now holds
-	 * a LIST, one address per line.
+	 * sub-folder (`ans/RehearsalNotes`). Each field therefore holds a LIST, one
+	 * address per line, and there is one field per material type.
 	 *
 	 * Newline is the separator, not comma: a project folder may legitimately
 	 * contain a comma and splitting on one would silently truncate it. A single
@@ -313,10 +327,10 @@ class ANSP_Scores_Source {
 	 * working untouched.
 	 *
 	 * @param int $project_id Project post ID.
-	 * @return array Two keys: 'groups' (string[]) and 'project' (string) — the FIRST address only.
+	 * @return array Two keys: 'groups' (string[]) and 'project' (string) — SHEET MUSIC only.
 	 */
 	public static function mirror_target( $project_id ) {
-		$targets = static::mirror_targets( $project_id );
+		$targets = static::mirror_targets( $project_id, 'sheet_music' );
 		if ( empty( $targets ) ) {
 			return array( 'groups' => array(), 'project' => '' );
 		}
@@ -344,16 +358,32 @@ class ANSP_Scores_Source {
 	 * project's own ans_group terms, exactly as before. An entirely empty field
 	 * falls back to the project title, which is a guess and usually a wrong one.
 	 *
-	 * @param int $project_id Project post ID.
-	 * @return array[] Never empty unless the project has no groups AND no title.
+	 * @param int    $project_id Project post ID.
+	 * @param string $kind       Material type: 'sheet_music', 'rehearsal_note' or 'recording'.
+	 * @return array[] Each entry gains a 'kind' key naming the material type it produces.
 	 */
-	public static function mirror_targets( $project_id ) {
+	public static function mirror_targets( $project_id, $kind = 'sheet_music' ) {
 		$project_id = (int) $project_id;
-		$explicit   = trim( (string) get_post_meta( $project_id, self::META_PROJECT, true ) );
+		$kinds      = static::mirror_kinds();
+		if ( ! isset( $kinds[ $kind ] ) ) {
+			return array();
+		}
+		$explicit = trim( (string) get_post_meta( $project_id, $kinds[ $kind ]['meta'], true ) );
 
 		if ( '' === $explicit ) {
+			/*
+			 * Only sheet music falls back to the project title. Guessing a folder
+			 * name is already wrong more often than right; doing it for notes and
+			 * audio as well would mean every project silently claimed folders it
+			 * was never given, and a wrong guess there shows a singer another
+			 * ensemble's material rather than merely nothing.
+			 */
+			if ( 'sheet_music' !== $kind ) {
+				return array();
+			}
 			return array(
 				array(
+					'kind'    => $kind,
 					'groups'  => static::project_group_slugs( $project_id ),
 					'project' => trim( (string) get_the_title( $project_id ) ),
 				),
@@ -370,18 +400,65 @@ class ANSP_Scores_Source {
 				$parts   = explode( '/', $line, 2 );
 				$group   = static::clean_group( $parts[0] );
 				$targets[] = array(
+					'kind'    => $kind,
 					'groups'  => '' === $group ? array() : array( $group ),
 					'project' => trim( $parts[1] ),
 				);
 				continue;
 			}
 			$targets[] = array(
+				'kind'    => $kind,
 				'groups'  => static::project_group_slugs( $project_id ),
 				'project' => $line,
 			);
 		}
 
 		return $targets;
+	}
+
+	/**
+	 * The mirror folder kinds a project can name, and what each one produces.
+	 *
+	 * Adding a type here is the whole job of supporting a new one: it gets a
+	 * field on the project screen, its folders get read, and its rows arrive
+	 * carrying the right material type. Nothing infers anything from a name.
+	 *
+	 * @return array[] Keyed by material type.
+	 */
+	public static function mirror_kinds() {
+		return array(
+			'sheet_music'    => array(
+				'meta'  => self::META_PROJECT,
+				'label' => __( 'Sheet music folders', 'ans-singers-portal' ),
+				'help'  => __( 'Published scores. Shown in Program Materials under their piece.', 'ans-singers-portal' ),
+			),
+			'rehearsal_note' => array(
+				'meta'  => self::META_NOTES,
+				'label' => __( 'Rehearsal notes folders', 'ans-singers-portal' ),
+				'help'  => __( "Shown on This Week's Assignments: the newest note is rendered in the page, earlier ones listed beneath it by date.", 'ans-singers-portal' ),
+			),
+			'recording'      => array(
+				'meta'  => self::META_AUDIO,
+				'label' => __( 'Recording folders', 'ans-singers-portal' ),
+				'help'  => __( 'Rehearsal audio and click tracks. Note the worker publishes PDFs only today, so this stays empty until that changes.', 'ans-singers-portal' ),
+			),
+		);
+	}
+
+	/**
+	 * Every mirror address this project reads, across every material type.
+	 *
+	 * @param int $project_id Project post ID.
+	 * @return array[]
+	 */
+	public static function all_mirror_targets( $project_id ) {
+		$all = array();
+		foreach ( array_keys( static::mirror_kinds() ) as $kind ) {
+			foreach ( static::mirror_targets( $project_id, $kind ) as $target ) {
+				$all[] = $target;
+			}
+		}
+		return $all;
 	}
 
 	/**
@@ -501,7 +578,7 @@ class ANSP_Scores_Source {
 	 * @param string $group_slug The group whose library it came from.
 	 * @return array
 	 */
-	protected static function to_material_row( $score, $group_slug, $project_id = 0 ) {
+	protected static function to_material_row( $score, $group_slug, $project_id = 0, $kind = 'sheet_music' ) {
 		$canonical = isset( $score['canonical'] ) ? (string) $score['canonical'] : '';
 		$pages     = isset( $score['pages'] ) ? (int) $score['pages'] : 0;
 		$version   = isset( $score['version'] ) ? (int) $score['version'] : 1;
@@ -525,7 +602,7 @@ class ANSP_Scores_Source {
 			);
 		}
 
-		$is_note = self::is_rehearsal_notes_folder( isset( $score['project'] ) ? $score['project'] : '' );
+		$is_note = ( 'rehearsal_note' === $kind );
 		$date    = $is_note ? self::rehearsal_date_from( $score ) : '';
 
 		if ( $is_note ) {
@@ -538,7 +615,7 @@ class ANSP_Scores_Source {
 
 		return array(
 			'id'     => self::ID_PREFIX . ( isset( $score['work_id'] ) ? sanitize_key( $score['work_id'] ) : '' ),
-			'type'   => $is_note ? 'rehearsal_note' : 'sheet_music',
+			'type'   => $kind,
 			'title'  => $canonical,
 			'url'    => self::score_link(
 				isset( $score['work_id'] ) ? (string) $score['work_id'] : '',
@@ -552,28 +629,6 @@ class ANSP_Scores_Source {
 			// Read by group-assignments.php. Empty on anything that is not a note.
 			'rehearsal_date' => $date,
 		);
-	}
-
-	/**
-	 * Is this mirror folder the rehearsal-notes folder?
-	 *
-	 * The worker has NO concept of a file type — every object it publishes is
-	 * structurally a score. The folder is therefore the only signal available,
-	 * which is exactly why the notes must stay in their own sub-folder rather
-	 * than being moved into the scanned root alongside the music.
-	 *
-	 * Matched on the LAST path segment so both `RehearsalNotes` and
-	 * `Rivers & Streams/Rehearsal Notes` are recognised, and loosely enough that
-	 * a space, a hyphen or a missing plural does not silently turn every note
-	 * back into sheet music.
-	 *
-	 * @param string $project_path The score's mirror project string.
-	 * @return bool
-	 */
-	protected static function is_rehearsal_notes_folder( $project_path ) {
-		$segments = explode( '/', (string) $project_path );
-		$last     = trim( (string) end( $segments ) );
-		return (bool) preg_match( '/^rehearsal[\s_-]*notes?$/i', $last );
 	}
 
 	/**
@@ -643,7 +698,7 @@ class ANSP_Scores_Source {
 	public static function add_meta_box() {
 		add_meta_box(
 			'ansp_scores_source',
-			__( 'Sheet-Music Mirror', 'ans-singers-portal' ),
+			__( 'Mirror Folders', 'ans-singers-portal' ),
 			array( __CLASS__, 'render_meta_box' ),
 			ANSP_CPT::POST_TYPE,
 			'side',
@@ -658,32 +713,50 @@ class ANSP_Scores_Source {
 	 */
 	public static function render_meta_box( $post ) {
 		wp_nonce_field( 'ansp_save_scores_source', 'ansp_scores_source_nonce' );
-		$value  = (string) get_post_meta( $post->ID, self::META_PROJECT, true );
-		$target = self::mirror_target( $post->ID );
-		$actual = $target['project'];
-		$groups = empty( $target['groups'] ) ? '' : implode( ', ', $target['groups'] );
 		?>
 		<p class="description">
-			<?php esc_html_e( 'Which mirror folders this project reads from, as group/project - for example chamber-singers/26-27 CS. The group is the folder Tom scanned, not the WordPress group name; the two are not required to match and usually do not. Singers Portal > Sheet-Music Mirror lists the exact strings the worker has.', 'ans-singers-portal' ); ?>
+			<?php esc_html_e( 'Mirror folders this project reads from, as group/project - for example chamber-singers/26-27 CS. The group is the folder Tom scanned, not the WordPress group name; the two are not required to match and usually do not. Singers Portal > Sheet-Music Mirror lists the exact strings the worker has.', 'ans-singers-portal' ); ?>
 		</p>
 		<p class="description">
-			<?php esc_html_e( 'ONE PER LINE. A project can read from several folders: scores in one, rehearsal notes in another. Files in a folder named "RehearsalNotes" are shown as rehearsal notes on This Week\'s Assignments rather than as sheet music - the folder is the only thing that tells them apart, so keep them in their own sub-folder.', 'ans-singers-portal' ); ?>
+			<?php esc_html_e( 'ONE FOLDER PER LINE, and one box per kind of material. The worker cannot tell a rehearsal note from a score - every file it publishes looks the same to it - so which box a folder is written in is what decides how singers see its contents.', 'ans-singers-portal' ); ?>
 		</p>
-		<p>
-			<textarea class="widefat" rows="3" name="ansp_scores_project"
-				placeholder="<?php echo esc_attr( get_the_title( $post->ID ) ); ?>"
-				spellcheck="false" autocomplete="off"><?php echo esc_textarea( $value ); ?></textarea>
-		</p>
-		<p class="description">
+		<?php foreach ( self::mirror_kinds() as $ansp_kind => $ansp_meta ) : ?>
 			<?php
-			printf(
-				/* translators: 1: mirror group id, 2: mirror project name */
-				esc_html__( 'Currently reading group %1$s, project %2$s.', 'ans-singers-portal' ),
-				'<code>' . esc_html( '' !== $groups ? $groups : '—' ) . '</code>',
-				'<code>' . esc_html( '' !== $actual ? $actual : '—' ) . '</code>'
-			);
+			$ansp_value   = (string) get_post_meta( $post->ID, $ansp_meta['meta'], true );
+			$ansp_targets = self::mirror_targets( $post->ID, $ansp_kind );
+			$ansp_field   = 'ansp_mirror_' . $ansp_kind;
 			?>
-		</p>
+			<p style="margin-bottom:.25em;">
+				<label for="<?php echo esc_attr( $ansp_field ); ?>">
+					<strong><?php echo esc_html( $ansp_meta['label'] ); ?></strong>
+				</label>
+			</p>
+			<p style="margin-top:0;">
+				<textarea class="widefat" rows="2" id="<?php echo esc_attr( $ansp_field ); ?>"
+					name="<?php echo esc_attr( $ansp_field ); ?>"
+					spellcheck="false" autocomplete="off"><?php echo esc_textarea( $ansp_value ); ?></textarea>
+			</p>
+			<p class="description" style="margin-top:0;">
+				<?php echo esc_html( $ansp_meta['help'] ); ?>
+				<?php if ( ! empty( $ansp_targets ) ) : ?>
+					<br />
+					<?php
+					$ansp_reading = array();
+					foreach ( $ansp_targets as $ansp_target ) {
+						$ansp_reading[] = '<code>' . esc_html(
+							( empty( $ansp_target['groups'] ) ? '?' : implode( '|', $ansp_target['groups'] ) )
+							. '/' . $ansp_target['project']
+						) . '</code>';
+					}
+					printf(
+						/* translators: %s: the mirror addresses currently being read */
+						esc_html__( 'Reading: %s', 'ans-singers-portal' ),
+						implode( ', ', $ansp_reading ) // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- each part escaped above.
+					);
+					?>
+				<?php endif; ?>
+			</p>
+		<?php endforeach; ?>
 		<?php if ( ! self::is_configured() ) : ?>
 			<p class="description" style="color:#b32d2e;">
 				<?php esc_html_e( 'The mirror is not configured yet, so nothing will appear. Singers Portal → Sheet-Music Mirror.', 'ans-singers-portal' ); ?>
@@ -712,16 +785,22 @@ class ANSP_Scores_Source {
 		if ( ! current_user_can( 'edit_post', $post_id ) ) {
 			return;
 		}
-		// sanitize_textarea_field, not sanitize_text_field: the latter flattens
-		// newlines to spaces, which would silently merge two addresses into one
-		// unusable string the moment anyone saved a project.
-		$value = isset( $_POST['ansp_scores_project'] )
-			? trim( sanitize_textarea_field( wp_unslash( $_POST['ansp_scores_project'] ) ) )
-			: '';
-		if ( '' === $value ) {
-			delete_post_meta( $post_id, self::META_PROJECT );
-		} else {
-			update_post_meta( $post_id, self::META_PROJECT, $value );
+		/*
+		 * sanitize_textarea_field, not sanitize_text_field: the latter flattens
+		 * newlines to spaces, which would silently merge two folder addresses
+		 * into one unusable string the moment anyone saved a project.
+		 */
+		foreach ( self::mirror_kinds() as $kind => $meta ) {
+			$field = 'ansp_mirror_' . $kind;
+			if ( ! isset( $_POST[ $field ] ) ) {
+				continue;
+			}
+			$value = trim( sanitize_textarea_field( wp_unslash( $_POST[ $field ] ) ) );
+			if ( '' === $value ) {
+				delete_post_meta( $post_id, $meta['meta'] );
+			} else {
+				update_post_meta( $post_id, $meta['meta'], $value );
+			}
 		}
 	}
 
@@ -908,7 +987,14 @@ class ANSP_Scores_Source {
 				'post_status'      => 'any',
 				'numberposts'      => 200,
 				'fields'           => 'ids',
-				'meta_key'         => self::META_PROJECT,
+				// Any of the three fields counts. Keying on META_PROJECT alone
+				// would hide a project that names only a notes folder.
+				'meta_query'       => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					'relation' => 'OR',
+					array( 'key' => self::META_PROJECT, 'compare' => 'EXISTS' ),
+					array( 'key' => self::META_NOTES, 'compare' => 'EXISTS' ),
+					array( 'key' => self::META_AUDIO, 'compare' => 'EXISTS' ),
+				),
 				'suppress_filters' => false,
 			)
 		);
@@ -917,7 +1003,7 @@ class ANSP_Scores_Source {
 		}
 		$groups = array();
 		foreach ( $rows as $id ) {
-			foreach ( static::mirror_targets( (int) $id ) as $target ) {
+			foreach ( static::all_mirror_targets( (int) $id ) as $target ) {
 				foreach ( $target['groups'] as $group ) {
 					if ( '' !== $group ) {
 						$groups[] = $group;
@@ -1002,7 +1088,7 @@ class ANSP_Scores_Source {
 	 * @return string '' when the work is not in any of this project's groups.
 	 */
 	protected static function signed_url_for( $work_id, $project_id, $fresh ) {
-		foreach ( static::mirror_targets( (int) $project_id ) as $target ) {
+		foreach ( static::all_mirror_targets( (int) $project_id ) as $target ) {
 			foreach ( $target['groups'] as $group ) {
 				foreach ( static::library( $group, $fresh ) as $score ) {
 					if ( empty( $score['work_id'] ) || empty( $score['url'] ) ) {

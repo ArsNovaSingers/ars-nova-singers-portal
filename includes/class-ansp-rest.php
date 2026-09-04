@@ -51,17 +51,52 @@ class ANSP_REST {
 	/** Namespace the connector can actually reach. See the class docblock. */
 	const NS = 'ars-nova/v1';
 
-	/** Option keys this plugin owns, exposed through /portal/settings. */
+	/**
+	 * Fixed option keys this plugin owns, exposed through /portal/settings.
+	 *
+	 * ⚠️ THE CALENDAR KEYS ARE NOT IN HERE, and that is not an omission.
+	 * This list used to name `ansp_calendar_main`, `_small` and `_friday`.
+	 * Since 1.32.0 a calendar option is named after the group it belongs to
+	 * (`ansp_calendar_ans`, `ansp_calendar_cs`, …) via
+	 * ANSP_Calendar::option_name(), so those three keys addressed nothing while
+	 * the two real ones were invisible to this endpoint. `settings_keys()`
+	 * derives them from the live group tree instead.
+	 */
 	const SETTINGS = array(
 		'ansp_current_season',
 		'ansp_portal_page_id',
-		'ansp_calendar_main',
-		'ansp_calendar_small',
-		'ansp_calendar_friday',
 		'ansp_invite_email_subject',
 		'ansp_invite_email_body',
 		'ansp_registration_notify',
+		/*
+		 * The singer-email master switch. Reachable here on purpose: when
+		 * something is mailing the choir unexpectedly, the fix has to be one
+		 * API call, not a release. See ANSP_Notifications.
+		 */
+		'ansp_notify_enabled',
 	);
+
+	/**
+	 * Every settings key, including the per-group calendar options.
+	 *
+	 * @return string[]
+	 */
+	public static function settings_keys() {
+		$keys = self::SETTINGS;
+
+		/*
+		 * slots() is ALREADY KEYED BY OPTION NAME — `ansp_calendar_<slug>` =>
+		 * [slug, label]. Running option_name() over those keys again would
+		 * produce `ansp_calendar_ansp_calendar_ans`, which addresses nothing
+		 * and would have quietly reintroduced exactly the class of bug this
+		 * change exists to fix.
+		 */
+		if ( class_exists( 'ANSP_Calendar' ) ) {
+			$keys = array_merge( $keys, array_keys( ANSP_Calendar::slots() ) );
+		}
+
+		return array_values( array_unique( $keys ) );
+	}
 
 	/**
 	 * Hook registration.
@@ -989,7 +1024,7 @@ class ANSP_REST {
 	 */
 	public function get_settings() {
 		$out = array();
-		foreach ( self::SETTINGS as $key ) {
+		foreach ( self::settings_keys() as $key ) {
 			$out[ $key ] = get_option( $key, '' );
 		}
 		// Never return the key itself; confirming it EXISTS is the useful part.
@@ -1011,7 +1046,7 @@ class ANSP_REST {
 		}
 
 		$written = array();
-		foreach ( self::SETTINGS as $key ) {
+		foreach ( self::settings_keys() as $key ) {
 			$val = $req->get_param( $key );
 			if ( null !== $val ) {
 				update_option( $key, sanitize_text_field( (string) $val ) );

@@ -250,7 +250,7 @@ if ( ! function_exists( 'ansp_note_label' ) ) {
 			 */
 			?>
 			<div class="ansp-note-embed">
-				<iframe src="<?php echo esc_url( $ansp_a_latest['url'] ); ?>"
+				<iframe src="<?php echo esc_url( $ansp_a_latest['url'] . '#view=FitH&navpanes=0' ); ?>"
 					title="<?php echo esc_attr( sprintf( /* translators: %s: rehearsal date */ __( 'Rehearsal notes, %s', 'ans-singers-portal' ), ansp_note_label( $ansp_a_latest ) ) ); ?>"
 					loading="lazy"></iframe>
 			</div>

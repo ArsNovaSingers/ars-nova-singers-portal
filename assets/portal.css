@@ -1379,8 +1379,9 @@
  * The newest note is embedded; earlier ones collapse into a short list. The
  * embed is a NARROW exception to the v1.14.0 removal of inline previews - one
  * document, on one sub-tab, that a singer is meant to read on arrival. The
- * aspect-ratio box keeps it from swallowing the page the way the old stacked
- * score iframes did, which is what that removal was actually about.
+ * It is deliberately tall enough that the note does not scroll INSIDE the
+ * frame - a scrollbar in a box in a page is the worst of both, and reading
+ * the note without chasing it is the entire point of embedding at all.
  * ---------------------------------------------------------------------- */
 
 .ansp-notes {
@@ -1408,8 +1409,7 @@
 .ansp-note-embed {
 	position: relative;
 	width: 100%;
-	aspect-ratio: 8.5 / 11;
-	max-height: 70vh;
+	aspect-ratio: 17 / 24;
 	border: 1px solid rgba(0, 0, 0, 0.15);
 	border-radius: 4px;
 	background: #fff;
@@ -1427,7 +1427,7 @@
 /* aspect-ratio is unsupported on older Safari; give it a usable height. */
 @supports not (aspect-ratio: 1 / 1) {
 	.ansp-note-embed {
-		height: 60vh;
+		height: 1100px;
 	}
 }
 
@@ -1469,7 +1469,7 @@
 /* A phone is where these actually get read. Keep the embed useful, not tall. */
 @media (max-width: 600px) {
 	.ansp-note-embed {
-		aspect-ratio: 1 / 1;
-		max-height: 55vh;
+		aspect-ratio: auto;
+		height: 70vh;
 	}
 }

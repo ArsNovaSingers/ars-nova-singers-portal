@@ -71,6 +71,14 @@ Since 1.2.0 there are no per-material grants: any logged-in portal member sees e
 
 == Changelog ==
 
+= Unreleased =
+* **Rehearsal notes now reach singers, on This Week's Assignments.** The newest note is rendered in the page; earlier ones collapse into a short list underneath, newest first. Until now that sub-tab matched on tags only, and nothing published through the mirror carried a tag, so it rendered empty for every group.
+* **A project now names its mirror folders per material type, one box each: sheet music, rehearsal notes, recordings.** Each takes one folder per line, so a production can read from several — Rivers & Streams keeps its scores in the scanned root and its rehearsal notes in a sub-folder. Existing single-line values keep working untouched.
+* **A folder's type is stated, not guessed.** The worker has no concept of a file type — every object it publishes is structurally a score — so something on this side must say what a folder holds. The first cut of this inferred it by matching the folder NAME against `RehearsalNotes`, and that was rejected: it would break silently the day someone named a folder "Notes", and it made a naming convention load-bearing for no reason. Adding a new type is now one entry in `mirror_kinds()` — it gets a field, its folders get read, and its rows arrive correctly typed.
+* Only sheet music falls back to guessing the folder from the project title. For notes and recordings an empty box means empty, because a wrong guess there shows a singer another ensemble's material rather than merely nothing.
+* Notes are ordered by the date in the filename (`ANS-0903notes` = 3 September), which matched Drive's created dates exactly. The worker's `published_at` is deliberately NOT the sort key: four notes added over three weeks were picked up in one scan, so their publish stamps are identical and sort arbitrarily. It remains a fallback, and a note with no readable date sorts last rather than disappearing.
+* Note the narrow exception: 1.14.0 removed every inline preview from `material-item.php`, and rightly — stacked score iframes pushed the real links off screen. Exactly one rehearsal note is embedded, on one sub-tab, with working Open buttons beneath it in case the browser declines to display it. Do not generalise it back out.
+
 = 1.35.0 =
 * **New read-only route `GET ars-nova/v1 portal/notifications`** - the current switch state and the send log, plus, with `?project_id=`, exactly who WOULD be emailed about that project without sending anything. Added because after 1.34.0 stopped the unwanted emails there was still no way to *observe* that it had, or to answer the question singers were actually asking on 2026-09-04: "did I get one?". Reading a fix is not the same as verifying it.
 

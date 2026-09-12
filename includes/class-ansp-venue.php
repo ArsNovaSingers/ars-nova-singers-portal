@@ -77,10 +77,20 @@ class ANSP_Venue {
 				'type'  => 'bool',
 				'help'  => __( 'Tick for a house concert or any venue whose address must not be public. The address is then sent on tickets and confirmation emails ONLY, and the public site shows the venue name alone.', 'ans-singers-portal' ),
 			),
-			'notes'    => array(
-				'label' => __( 'Access / parking notes', 'ans-singers-portal' ),
+			'directions'      => array(
+				'label' => __( 'Getting there (shown to patrons)', 'ans-singers-portal' ),
 				'type'  => 'textarea',
-				'help'  => __( 'Parking, entrance, accessibility. Optional.', 'ans-singers-portal' ),
+				'help'  => __( 'How to find the room once they have found the building. This text is sent to ticket holders in the reminder email, so write it for a stranger arriving in the dark. A blank line starts a new paragraph.', 'ans-singers-portal' ),
+			),
+			'parking'         => array(
+				'label' => __( 'Parking (shown to patrons)', 'ans-singers-portal' ),
+				'type'  => 'textarea',
+				'help'  => __( 'Where to park and what it costs. Sent to ticket holders in the reminder email. This belongs to the room, not to one night - a three-night run at one church should never need it typed three times.', 'ans-singers-portal' ),
+			),
+			'notes'           => array(
+				'label' => __( 'Internal notes (never shown to patrons)', 'ans-singers-portal' ),
+				'type'  => 'textarea',
+				'help'  => __( 'Staff only. Where the capacity figure came from, who confirmed it, booking contacts, open questions. Nothing here is ever sent to a ticket holder - patron-facing text goes in the two fields above.', 'ans-singers-portal' ),
 			),
 		);
 	}

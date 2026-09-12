@@ -4,7 +4,7 @@ Tags: members, portal, choir, private, materials
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.36.0
+Stable tag: 1.37.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -70,6 +70,12 @@ Deactivation removes nothing. Uninstall also keeps everything by default; define
 Since 1.2.0 there are no per-material grants: any logged-in portal member sees every material in a project they can access. Give the guest a portal account (Roster → Send portal invite) and, if the project is group-tagged, add them to that group (e.g. Special Guests).
 
 == Changelog ==
+
+= 1.37.0 =
+* **A venue now carries the directions and parking that reach ticket holders.** Two new fields on the Venue record, `Getting there` and `Parking`, read by the ticketing bridge's reminder email. They belong to the room rather than to one night: until now the text lived in `_purchase_note` on a WooCommerce ticket product that all three nights of a run share, so it could not vary by night AND could not be reused across two productions at the same address. Parking changes when the church repaves its lot, not when we programme a different concert.
+* **`Access / parking notes` has been renamed `Internal notes (never shown to patrons)`, because that is what it has always held.** All seven live venue records use it as a staff audit trail — where a capacity figure came from, who confirmed it, booking phone numbers, open questions addressed to Kim by name. One of them reads "Capacity 0 = NOT RECORDED, deliberately… ASK KIM". Adding patron-facing fields beside a box labelled "parking notes" would have invited somebody to type parking into it, and that box is one wiring mistake away from a concert reminder. Stored values are untouched and nothing outside `ANSP_Venue` reads the field, so this is a rename of a human-facing description, not a behaviour change.
+* Each of the three boxes now states its own audience in its help text — the two new ones say the words go to ticket holders, the internal one says nothing in it is ever sent. A field whose blast radius is invisible is how the wrong text ends up in front of 200 people.
+* Purely additive otherwise: the meta box, `save_meta()`, `write_field()`, `get_venue()` and the REST upsert all iterate `fields()`, so the new keys appear on the edit screen and in `GET portal/venues/{id}` without any of those methods changing.
 
 = 1.36.0 =
 * **Rehearsal notes now reach singers, on This Week's Assignments.** The newest note is rendered in the page; earlier ones collapse into a short list underneath, newest first. Until now that sub-tab matched on tags only, and nothing published through the mirror carried a tag, so it rendered empty for every group.

@@ -102,6 +102,21 @@ class ANSP_Mirror_Sync {
 	}
 
 	/**
+	 * Has this project ever been given a mirror address, or been scanned?
+	 *
+	 * @param int $project_id Project.
+	 * @return bool
+	 */
+	protected static function has_published_before( $project_id ) {
+		foreach ( ANSP_Scores_Source::mirror_kinds() as $kind ) {
+			if ( '' !== trim( (string) get_post_meta( $project_id, $kind['meta'], true ) ) ) {
+				return true;
+			}
+		}
+		return (bool) ANSP_Scores_Source::found_folders( $project_id );
+	}
+
+	/**
 	 * Ask the worker to scan one project's Drive folder.
 	 *
 	 * @param int    $project_id Project.
@@ -121,8 +136,21 @@ class ANSP_Mirror_Sync {
 			return new WP_Error( 'ansp_no_group', __( 'This project has no mirror group, so there is nowhere to file its music.', 'ans-singers-portal' ) );
 		}
 
+		/*
+		 * 1.39.0: a project that has never published gets its own space in
+		 * the mirror, named for the project. One that has (any mirror field set,
+		 * or a previous scan) keeps the unprefixed scheme, because its published
+		 * paths are frozen and moving them would duplicate every file.
+		 */
+		$prefix = ANSP_Scores_Source::project_prefix( $project_id );
+		if ( '' === $prefix && ! self::has_published_before( $project_id ) ) {
+			$prefix = ANSP_Scores_Source::default_prefix( $project_id );
+			update_post_meta( $project_id, ANSP_Scores_Source::META_PREFIX, $prefix );
+		}
+
 		$summary = array(
 			'project_id'  => $project_id,
+			'prefix'      => $prefix,
 			'group'       => $group,
 			'folder_id'   => $folder,
 			'rounds'      => 0,
@@ -138,9 +166,10 @@ class ANSP_Mirror_Sync {
 				'/scan',
 				'POST',
 				array(
-					'group'        => $group,
-					'folder_id'    => $folder,
-					'actor'        => $actor,
+					'group'          => $group,
+					'folder_id'      => $folder,
+					'project_prefix' => $prefix,
+					'actor'          => $actor,
 					'auto_publish' => array(
 						'audio'             => true,
 						'new_work_projects' => self::note_folders( $project_id, $group ),
@@ -158,6 +187,14 @@ class ANSP_Mirror_Sync {
 			}
 			$summary['rounds']++;
 			$summary['last'] = $res;
+			if ( isset( $res['folders_in_scan'] ) && is_array( $res['folders_in_scan'] ) ) {
+				$found = array();
+				foreach ( $res['folders_in_scan'] as $folder_key ) {
+					$found[] = $group . '/' . (string) $folder_key;
+				}
+				update_post_meta( $project_id, ANSP_Scores_Source::META_FOUND, $found );
+				$summary['folders'] = $found;
+			}
 			foreach ( (array) ( isset( $res['results'] ) ? $res['results'] : array() ) as $row ) {
 				$name    = isset( $row['source_name'] ) ? (string) $row['source_name'] : '';
 				$outcome = isset( $row['outcome'] ) ? (string) $row['outcome'] : '';

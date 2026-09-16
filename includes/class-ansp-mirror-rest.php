@@ -402,6 +402,20 @@ class ANSP_Mirror_Rest {
 		if ( is_wp_error( $guard ) ) {
 			return $guard;
 		}
+		// 1.39.0: the project's own space in the mirror. Changing it on a
+		// project that has already published strands those files under the old
+		// name, so it is only ever set deliberately.
+		if ( null !== $req->get_param( 'prefix' ) ) {
+			$prefix = trim( str_replace( '\\', '/', sanitize_text_field( (string) $req->get_param( 'prefix' ) ) ), '/' );
+			if ( '' === $prefix ) {
+				delete_post_meta( $id, ANSP_Scores_Source::META_PREFIX );
+			} else {
+				update_post_meta( $id, ANSP_Scores_Source::META_PREFIX, $prefix );
+			}
+			if ( null === $req->get_param( 'value' ) ) {
+				return rest_ensure_response( self::describe_project( $id, true ) );
+			}
+		}
 		if ( null === $req->get_param( 'value' ) ) {
 			return new WP_Error(
 				'ansp_mirror_value_missing',
@@ -535,6 +549,8 @@ class ANSP_Mirror_Rest {
 			'value'            => $value,
 			'value_is_set'     => '' !== $value,
 			'folders_by_kind'  => $by_kind,
+			'prefix'           => ANSP_Scores_Source::project_prefix( $id ),
+			'found_folders'    => ANSP_Scores_Source::found_folders( $id ),
 			'resolved_groups'  => array_values( $target['groups'] ),
 			'resolved_project' => $target['project'],
 			'matching_scores'  => count( $matching ),

@@ -221,7 +221,8 @@ class ANSP_Materials {
 	}
 
 	/**
-	 * Split one piece's rows into content-type sections, in a musical order.
+	 * Split one piece's rows into dropdown sections: one per Drive subfolder,
+	 * and one per content type for rows that did not come from a subfolder.
 	 *
 	 * Scores first, then audio, then everything else - which is the order a
 	 * singer wants them in, not alphabetical.
@@ -242,8 +243,30 @@ class ANSP_Materials {
 		$order   = array_keys( self::types() );
 		$labels  = self::type_tag_labels();
 		$buckets = array();
+		$folders = array();
 
 		foreach ( $rows as $row ) {
+			/*
+			 * 1.39.0: a row that came from a Drive subfolder goes in a list
+			 * named for that folder - Jonathan: "folders define dropdown
+			 * groups", so click tracks, rehearsal tracks and a rehearsal's
+			 * recordings are three lists, not one "Audio" heap. A row with no
+			 * folder is grouped by type, as before.
+			 */
+			$section = is_array( $row ) && isset( $row['section'] ) ? trim( (string) $row['section'] ) : '';
+			if ( '' !== $section ) {
+				$key = strtolower( $section );
+				if ( ! isset( $folders[ $key ] ) ) {
+					$folders[ $key ] = array(
+						'type'  => 'folder',
+						'label' => $section,
+						'sort'  => isset( $row['section_sort'] ) && '' !== $row['section_sort'] ? (string) $row['section_sort'] : $section,
+						'rows'  => array(),
+					);
+				}
+				$folders[ $key ]['rows'][] = $row;
+				continue;
+			}
 			$type = is_array( $row ) && isset( $row['type'] ) ? (string) $row['type'] : '';
 			if ( ! isset( $buckets[ $type ] ) ) {
 				$buckets[ $type ] = array();
@@ -251,11 +274,33 @@ class ANSP_Materials {
 			$buckets[ $type ][] = $row;
 		}
 
-		if ( count( $buckets ) < 2 ) {
+		if ( count( $buckets ) + count( $folders ) < 2 ) {
 			return array();
 		}
 
+		// Scores, then loose recordings, then each folder, then everything else.
 		$out = array();
+		foreach ( array( 'sheet_music', 'recording' ) as $type ) {
+			if ( ! empty( $buckets[ $type ] ) ) {
+				$out[] = array(
+					'type'  => $type,
+					'label' => isset( $labels[ $type ] ) ? $labels[ $type ] : $type,
+					'rows'  => $buckets[ $type ],
+				);
+				unset( $buckets[ $type ] );
+			}
+		}
+		// Folders in name order, so "01 Click Tracks" comes before
+		// "02 Rehearsal Tracks" however the files happen to sort.
+		uasort(
+			$folders,
+			static function ( $a, $b ) {
+				return strnatcasecmp( $a['sort'], $b['sort'] );
+			}
+		);
+		foreach ( $folders as $folder ) {
+			$out[] = $folder;
+		}
 		foreach ( $order as $type ) {
 			if ( ! empty( $buckets[ $type ] ) ) {
 				$out[] = array(

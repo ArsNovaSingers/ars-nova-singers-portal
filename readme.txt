@@ -4,7 +4,7 @@ Tags: members, portal, choir, private, materials
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.39.4
+Stable tag: 1.40.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -71,7 +71,7 @@ Since 1.2.0 there are no per-material grants: any logged-in portal member sees e
 
 == Changelog ==
 
-= Unreleased =
+= 1.40.0 =
 * **Add-ons can supply a Hub template.** New filter `ansp_template_file` in `ansp_get_template()`, so the separate Practice add-on (`ars-nova-practice`) can replace the "This Week's Assignments" sub-tab. With the add-on switched off nothing changes.
 
 = 1.39.4 =

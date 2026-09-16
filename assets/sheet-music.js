@@ -138,7 +138,7 @@
 				if ( btnScan ) {
 					btnScan.disabled = false;
 				}
-				say( 'Root folder set. Now scan it.', 'ok' );
+				say( 'Root folder set. Click Rescan Drive to bring its files in.', 'ok' );
 			} )
 			.catch( function ( e ) { say( e.message, 'error' ); } )
 			.then( function () { busy( button, false ); } );
@@ -293,7 +293,7 @@
 		if ( ! items.length ) {
 			var p = document.createElement( 'p' );
 			p.className = 'ansp-sm-muted';
-			p.textContent = 'Nothing waiting. Scan the folder to look for new music.';
+			p.textContent = 'No updated scores waiting for approval.';
 			elList.appendChild( p );
 			return;
 		}
@@ -304,18 +304,11 @@
 
 	if ( btnScan ) {
 		btnScan.addEventListener( 'click', function () {
-			busy( btnScan, true, 'Scanning…' );
-			say( 'Reading the folder. Large scores take a while to check.', '' );
+			busy( btnScan, true, 'Rescanning…' );
+			say( 'Checking Drive. Large scores take a while, so this can take a few minutes.', '' );
 			post( 'ansp_sm_scan', {} )
 				.then( function ( d ) {
-					var s = d.scan || {};
-					var found = ( s.results || [] ).filter( function ( r ) { return 'staged' === r.outcome; } ).length;
-					say(
-						found
-							? found + ' new file' + ( 1 === found ? '' : 's' ) + ' to look at below.'
-							: 'Nothing new — everything in that folder has already been added.',
-						'ok'
-					);
+					say( d.message || 'Done.', 'ok' );
 					draw( d );
 				} )
 				.catch( function ( e ) { say( e.message, 'error' ); } )

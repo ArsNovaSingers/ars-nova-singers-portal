@@ -2,7 +2,8 @@
 /**
  * The "Sheet music" panel on a project.
  *
- * Four numbered steps in the order they are done, on one screen. Everything
+ * Two numbered steps on one screen: the root folder with its Rescan Drive
+ * button beside it (1.39.3), then the scores waiting for approval. Everything
  * after step 1 is drawn by assets/sheet-music.js from what the service
  * returns, because the list changes as you scan, optimise and approve, and a
  * page reload between each would lose your place.
@@ -34,11 +35,19 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
 			<em><?php esc_html_e( 'No folder set yet.', 'ans-singers-portal' ); ?></em>
 		<?php endif; ?>
 	</p>
-	<p>
+	<p class="ansp-sm-actions">
 		<button type="button" class="button" data-ansp-sm-setfolder>
 			<?php echo '' !== $ansp_folder_id ? esc_html__( 'Change root folder', 'ans-singers-portal' ) : esc_html__( 'Set root folder', 'ans-singers-portal' ); ?>
 		</button>
+		<button type="button" class="button button-primary" data-ansp-sm-scan
+			<?php disabled( '' === $ansp_folder_id || '' === $ansp_group ); ?>>
+			<?php esc_html_e( 'Rescan Drive', 'ans-singers-portal' ); ?>
+		</button>
 	</p>
+	<p class="ansp-sm-muted ansp-sm-rescan-note">
+		<?php esc_html_e( 'Added new materials to this project\'s Drive folder? Click Rescan so they appear here. New recordings and rehearsal notes go live at once; a named subfolder becomes its own dropdown; an updated score waits for your approval below.', 'ans-singers-portal' ); ?>
+	</p>
+	<div class="ansp-sm-status" data-ansp-sm-status></div>
 
 	<div class="ansp-sm-picker" data-ansp-sm-picker hidden>
 		<p class="ansp-sm-muted"><?php esc_html_e( 'Browse to the folder, or paste its address from Google Drive.', 'ans-singers-portal' ); ?></p>
@@ -52,19 +61,6 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
 	</div>
 
 	<!-- 2 ------------------------------------------------------------ -->
-	<h4 class="ansp-sm-step"><span>2</span><?php esc_html_e( 'Scan for music', 'ans-singers-portal' ); ?></h4>
-	<p>
-		<button type="button" class="button button-primary" data-ansp-sm-scan
-			<?php disabled( '' === $ansp_folder_id || '' === $ansp_group ); ?>>
-			<?php esc_html_e( 'Scan this folder', 'ans-singers-portal' ); ?>
-		</button>
-		<span class="ansp-sm-muted" style="margin-left:.5em;">
-			<?php esc_html_e( 'Reads the folder and proposes a name for anything new. Changes nothing.', 'ans-singers-portal' ); ?>
-		</span>
-	</p>
-
-	<!-- 3 & 4 -------------------------------------------------------- -->
-	<h4 class="ansp-sm-step"><span>3</span><?php esc_html_e( 'Check the names, then add each piece', 'ans-singers-portal' ); ?></h4>
-	<div class="ansp-sm-status" data-ansp-sm-status></div>
+	<h4 class="ansp-sm-step"><span>2</span><?php esc_html_e( 'Approve updated scores', 'ans-singers-portal' ); ?></h4>
 	<div data-ansp-sm-list></div>
 </div>

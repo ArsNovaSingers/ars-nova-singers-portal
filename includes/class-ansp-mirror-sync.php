@@ -519,6 +519,53 @@ class ANSP_Mirror_Sync {
 	}
 
 	/**
+	 * One sentence or three saying what a scan did, for whichever button ran it.
+	 *
+	 * The Singers Hub button and the project screen's button run the same scan
+	 * and must report it the same way; only where an updated score waits
+	 * differs, because the project screen shows that list right below.
+	 *
+	 * @param array  $result scan_project() result.
+	 * @param string $where  'hub' or 'project'.
+	 * @return string
+	 */
+	public static function summary_message( $result, $where = 'hub' ) {
+		$added   = count( (array) $result['published'] );
+		$moved   = isset( $result['moved'] ) ? count( (array) $result['moved'] ) : 0;
+		$waiting = count( (array) $result['staged'] );
+		$parts   = array();
+		if ( $added ) {
+			/* translators: %d: number of files */
+			$parts[] = sprintf( _n( '%d new file added.', '%d new files added.', $added, 'ans-singers-portal' ), $added );
+		}
+		if ( $moved ) {
+			/* translators: %d: number of files */
+			$parts[] = sprintf( _n( '%d file moved to a different dropdown.', '%d files moved to a different dropdown.', $moved, 'ans-singers-portal' ), $moved );
+		}
+		if ( $waiting ) {
+			if ( 'project' === $where ) {
+				/* translators: %d: number of files */
+				$parts[] = sprintf( _n( '%d updated score is waiting for your approval below.', '%d updated scores are waiting for your approval below.', $waiting, 'ans-singers-portal' ), $waiting );
+			} else {
+				/* translators: %d: number of files */
+				$parts[] = sprintf( _n( '%d updated score is waiting for approval on the project screen.', '%d updated scores are waiting for approval on the project screen.', $waiting, 'ans-singers-portal' ), $waiting );
+			}
+		}
+		if ( ! empty( $result['remaining'] ) ) {
+			$parts[] = __( 'More files are still waiting to be checked - press Rescan again.', 'ans-singers-portal' );
+		}
+		if ( ! empty( $result['problems'] ) ) {
+			$parts[] = 'project' === $where
+				? __( 'Some files could not be read:', 'ans-singers-portal' ) . ' ' . implode( '; ', array_map( 'strval', (array) $result['problems'] ) )
+				: __( 'Some files could not be read - see the project screen.', 'ans-singers-portal' );
+		}
+		if ( ! $parts ) {
+			$parts[] = __( 'Nothing new in Drive.', 'ans-singers-portal' );
+		}
+		return implode( ' ', $parts );
+	}
+
+	/**
 	 * admin-ajax: scan one project now.
 	 */
 	public static function ajax_check_drive() {
@@ -538,38 +585,17 @@ class ANSP_Mirror_Sync {
 			wp_send_json_error( array( 'message' => $result->get_error_message() ), 502 );
 		}
 
+		$message = self::summary_message( $result, 'hub' );
 		$added   = count( $result['published'] );
 		$moved   = count( $result['moved'] );
 		$waiting = count( $result['staged'] );
-		$parts   = array();
-		if ( $added ) {
-			/* translators: %d: number of files */
-			$parts[] = sprintf( _n( '%d new file added.', '%d new files added.', $added, 'ans-singers-portal' ), $added );
-		}
-		if ( $moved ) {
-			/* translators: %d: number of files */
-			$parts[] = sprintf( _n( '%d file moved to a different dropdown.', '%d files moved to a different dropdown.', $moved, 'ans-singers-portal' ), $moved );
-		}
-		if ( $waiting ) {
-			/* translators: %d: number of files */
-			$parts[] = sprintf( _n( '%d updated score is waiting for approval on the project screen.', '%d updated scores are waiting for approval on the project screen.', $waiting, 'ans-singers-portal' ), $waiting );
-		}
-		if ( $result['remaining'] > 0 ) {
-			$parts[] = __( 'More files are still waiting to be checked - press again.', 'ans-singers-portal' );
-		}
-		if ( $result['problems'] ) {
-			$parts[] = __( 'Some files could not be read - see the project screen.', 'ans-singers-portal' );
-		}
-		if ( ! $parts ) {
-			$parts[] = __( 'Nothing new in Drive.', 'ans-singers-portal' );
-		}
 
 		wp_send_json_success(
 			array(
 				'added'   => $added,
 				'moved'   => $moved,
 				'waiting' => $waiting,
-				'message' => implode( ' ', $parts ),
+				'message' => $message,
 				'reload'  => ( $added + $moved ) > 0,
 			)
 		);

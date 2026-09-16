@@ -287,7 +287,10 @@ class ANSP_Mirror_Pieces {
 	public static function resolve( $score, $kind, $map, $pieces, $prefix = '' ) {
 		$work_id  = isset( $score['work_id'] ) ? sanitize_key( (string) $score['work_id'] ) : '';
 		$entry    = ( '' !== $work_id && isset( $map[ $work_id ] ) ) ? $map[ $work_id ] : array();
-		$segments = self::folder_segments( isset( $score['project'] ) ? (string) $score['project'] : '', $prefix );
+		// Where the file sits in Drive NOW (worker 0.7.1), which differs from
+		// where it was first published once somebody moves it.
+		$where    = ! empty( $score['folder'] ) ? (string) $score['folder'] : ( isset( $score['project'] ) ? (string) $score['project'] : '' );
+		$segments = self::folder_segments( $where, $prefix );
 
 		list( $piece, $source, $used_folder ) = self::resolve_piece( $score, $kind, $entry, $pieces, $segments );
 
@@ -473,7 +476,7 @@ class ANSP_Mirror_Pieces {
 			$out[] = array(
 				'work_id'   => $work_id,
 				'canonical' => isset( $score['canonical'] ) ? (string) $score['canonical'] : '',
-				'folder'    => isset( $score['project'] ) ? (string) $score['project'] : '',
+				'folder'    => ! empty( $score['folder'] ) ? (string) $score['folder'] : ( isset( $score['project'] ) ? (string) $score['project'] : '' ),
 				'media'     => isset( $score['media'] ) ? (string) $score['media'] : 'pdf',
 				'kind'      => $kind,
 				'piece'     => $piece,

@@ -71,6 +71,9 @@ Since 1.2.0 there are no per-material grants: any logged-in portal member sees e
 
 == Changelog ==
 
+= Unreleased =
+* **Moving a file into another Drive folder moves it to that dropdown on the next Rescan.** Requires ans-scores-worker 0.7.1, which records the folder a published file now sits in (a Drive move changes neither the bytes nor the modified time, so it used to go unnoticed). The published path does not change - a singer's device keeps the file it has - only the grouping follows Drive. A file is also found under its new folder, so emptying a folder does not take its files off the Hub.
+
 = 1.39.0 =
 * **Each Drive subfolder is its own dropdown.** Jonathan: "folders define dropdown groups." Inside a piece, click tracks, rehearsal tracks and a rehearsal's recordings are now separate lists named after their Drive folders, instead of one Sheet Music and one Audio heap. Folder names read as words (`ClickTracks` and `click-tracks` both show "Click Tracks"); a one- or two-digit number in front (`01 Click Tracks`) orders the dropdowns and is not shown. A composer folder names the piece and is left out of the dropdown's name. Files with no subfolder still group by type. A hand-entered row that links a Drive file takes that file's folder dropdown, so hand-pasted tracks sit in the same list as the rest of their folder. The project screen's box gains a Dropdown column to move a single file.
 * **New subfolders appear on the next Rescan with nothing typed anywhere.** Every scan records the folders it found (`_ansp_mirror_folders`) and the project reads them all. Only a rehearsal-notes folder still needs naming, so dated notes are treated as notes.

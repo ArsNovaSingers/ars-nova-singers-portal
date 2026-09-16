@@ -4,7 +4,7 @@ Tags: members, portal, choir, private, materials
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.38.0
+Stable tag: 1.38.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -71,7 +71,7 @@ Since 1.2.0 there are no per-material grants: any logged-in portal member sees e
 
 == Changelog ==
 
-= Unreleased =
+= 1.38.1 =
 * **The hourly Drive scan is gone; managers get a Rescan Drive button instead.** Jonathan: the hourly job was wasteful - material arrives a few times a week, from a person who knows they just added it. Each project with a Drive folder now shows managers (never singers) a "Rescan Drive" button in the Singers Hub, with a note to click it when new materials are added. It runs the same scan as the project screen's Scan button: recordings and new dated rehearsal notes appear at once, and the page reloads when something was added; an updated score still waits for approval on the project screen. Updating the plugin removes the 1.38.0 schedule by itself. This also ends staging publishing into the shared production mirror on a timer.
 * Every scan is logged with who asked: `GET ars-nova/v1 portal/mirror/scans` (replaces `portal/mirror/autoscan`).
 

@@ -71,6 +71,9 @@ Since 1.2.0 there are no per-material grants: any logged-in portal member sees e
 
 == Changelog ==
 
+= Unreleased =
+* **Rescan shows a moved file straight away.** 1.39.1 only cleared the Hub's five-minute library cache when a scan published something new. A move publishes nothing, so a file moved into another Drive folder disappeared from the Hub until the cache ran out, then came back under its new dropdown (found on staging with a real Drive move). Every successful scan now clears the cache. The Rescan Drive button also reports moved files ("1 file moved to a different dropdown.") and reloads the page for them, and the scan log records them.
+
 = 1.39.1 =
 * **Moving a file into another Drive folder moves it to that dropdown on the next Rescan.** Requires ans-scores-worker 0.7.1, which records the folder a published file now sits in (a Drive move changes neither the bytes nor the modified time, so it used to go unnoticed). The published path does not change - a singer's device keeps the file it has - only the grouping follows Drive. A file is also found under its new folder, so emptying a folder does not take its files off the Hub.
 

@@ -675,3 +675,23 @@
 		} );
 	} );
 } )();
+
+/*
+ * 1.39.4: Expand all / Collapse all. Acts on every piece and dropdown in the
+ * same project panel as the button (the form it sits in), nothing wider.
+ */
+( function () {
+	'use strict';
+	document.addEventListener( 'click', function ( e ) {
+		var btn = e.target && e.target.closest ? e.target.closest( '[data-ansp-fold-all]' ) : null;
+		if ( ! btn ) {
+			return;
+		}
+		e.preventDefault();
+		var scope = btn.closest( 'form' ) || btn.closest( '[data-ansp-subpanel]' ) || document;
+		var open  = 'open' === btn.getAttribute( 'data-ansp-fold-all' );
+		Array.prototype.slice.call( scope.querySelectorAll( 'details[data-ansp-fold]' ) ).forEach( function ( d ) {
+			d.open = open;
+		} );
+	} );
+} )();

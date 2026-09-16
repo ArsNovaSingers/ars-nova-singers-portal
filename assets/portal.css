@@ -121,6 +121,7 @@
 }
 .ansp-notice--success { background: #eaf7ef; border-color: #bfe5cc; }
 .ansp-notice--error { background: #fdeeee; border-color: #f0c4c4; }
+.ansp-notice--warning { background: #fdf6e3; border-color: #ecd9a0; }
 
 /* ---------- Tabs ---------- */
 .ansp-tabs {
@@ -1480,3 +1481,27 @@
 .ansp-check-drive-status{flex-basis:100%;font-weight:600}
 .ansp-check-drive-status:empty{display:none}
 .ansp-check-drive-status.is-error{color:#b32d2e}
+
+/* ---------------------------------------------------------------------------
+ * 1.39.4 — pieces fold; Expand all / Collapse all.
+ * ------------------------------------------------------------------------- */
+.ansp-piecebox > summary.ansp-piece-title {
+	display: flex;
+	align-items: baseline;
+	gap: 0.45rem;
+	cursor: pointer;
+	list-style: none;
+}
+.ansp-piecebox > summary.ansp-piece-title::-webkit-details-marker { display: none; }
+.ansp-piecebox > summary.ansp-piece-title::before {
+	content: "\25B8";
+	display: inline-block;
+	font-size: 0.9em;
+	transition: transform 0.12s ease;
+}
+.ansp-piecebox[open] > summary.ansp-piece-title::before { transform: rotate( 90deg ); }
+.ansp-piece-count { font-size: 0.75em; font-weight: 600; opacity: 0.6; }
+.ansp-foldbar { display: flex; flex-wrap: wrap; gap: 0.4rem; justify-content: flex-end; margin: 0 0 0.5rem; }
+@media ( prefers-reduced-motion: reduce ) {
+	.ansp-piecebox > summary.ansp-piece-title::before { transition: none; }
+}

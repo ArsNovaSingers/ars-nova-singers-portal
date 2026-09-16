@@ -45,8 +45,12 @@ class ANSP_Bio_Editor {
 	 * @param string $code Status code.
 	 * @return void
 	 */
-	protected function redirect( $code ) {
-		wp_safe_redirect( add_query_arg( 'ansp_bio', rawurlencode( $code ), ansp_get_portal_url() . '#tab-bio' ) );
+	protected function redirect( $code, $missing = array() ) {
+		$args = array( 'ansp_bio' => rawurlencode( $code ) );
+		if ( $missing ) {
+			$args['ansp_missing'] = rawurlencode( implode( ',', $missing ) );
+		}
+		wp_safe_redirect( add_query_arg( $args, ansp_get_portal_url() . '#tab-bio' ) );
 		exit;
 	}
 
@@ -97,14 +101,15 @@ class ANSP_Bio_Editor {
 		 */
 		$year_ok = ( $year_joined >= ansp_founding_year() && $year_joined <= (int) current_time( 'Y' ) );
 
-		if (
-			'' === $display_name
-			|| empty( $parts )
-			|| ! is_email( $email )
-			|| '' === $phone
-			|| '' === wp_strip_all_tags( $bio_raw )
-			|| ! $year_ok
-		) {
+		/*
+		 * 1.39.4: only two things stop a save - no display name, or an email
+		 * that is filled in but not an email. Everything else that is filled
+		 * in is saved, and the singer is told what is still missing. Until
+		 * 1.39.4 any empty required field refused the WHOLE form, so a singer
+		 * who only wanted to fix a voice part could not, and a profile with no
+		 * email on file could not be saved at all until one was typed.
+		 */
+		if ( '' === $display_name || ( '' !== $email && ! is_email( $email ) ) ) {
 			$this->redirect( 'missing_required' );
 		}
 
@@ -119,7 +124,9 @@ class ANSP_Bio_Editor {
 		);
 
 		// ---- Canonical profile-detail meta (same keys as the admin box) ---
-		update_post_meta( $profile_id, 'parts', $parts );
+		if ( $parts ) {
+			update_post_meta( $profile_id, 'parts', $parts );
+		}
 
 		/*
 		 * Years with the group is CALCULATED from the join year, never typed.
@@ -127,8 +134,10 @@ class ANSP_Bio_Editor {
 		 * (roster, public bio page, exports) keeps working — but it is now a
 		 * derived cache, and the join year is the source of truth.
 		 */
-		update_post_meta( $profile_id, 'year_joined', $year_joined );
-		update_post_meta( $profile_id, 'years_with_group', max( 0, (int) current_time( 'Y' ) - $year_joined ) );
+		if ( $year_ok ) {
+			update_post_meta( $profile_id, 'year_joined', $year_joined );
+			update_post_meta( $profile_id, 'years_with_group', max( 0, (int) current_time( 'Y' ) - $year_joined ) );
+		}
 
 		$fav = isset( $_POST['ans_fav'] ) ? sanitize_text_field( wp_unslash( $_POST['ans_fav'] ) ) : '';
 		if ( '' !== $fav ) {
@@ -217,8 +226,29 @@ class ANSP_Bio_Editor {
 		if ( $upload_error ) {
 			$this->redirect( 'upload_failed' );
 		}
+
+		// What is still missing, read back from what is now stored.
+		$missing = array();
 		if ( ! $has_headshot ) {
-			$this->redirect( 'missing_headshot' );
+			$missing[] = 'photo';
+		}
+		if ( ! ANSP_Singer_CPT::get_parts( $profile_id ) ) {
+			$missing[] = 'part';
+		}
+		if ( ! is_email( (string) get_post_meta( $profile_id, 'ansp_email', true ) ) ) {
+			$missing[] = 'email';
+		}
+		if ( '' === (string) get_post_meta( $profile_id, 'ansp_phone', true ) ) {
+			$missing[] = 'phone';
+		}
+		if ( '' === trim( wp_strip_all_tags( (string) get_post_field( 'post_content', $profile_id ) ) ) ) {
+			$missing[] = 'bio';
+		}
+		if ( ! ansp_get_year_joined( $profile_id ) ) {
+			$missing[] = 'year';
+		}
+		if ( $missing ) {
+			$this->redirect( 'saved_incomplete', $missing );
 		}
 
 		$this->redirect( 'saved' );
@@ -245,10 +275,40 @@ class ANSP_Bio_Editor {
 		$map = array(
 			'saved'            => array( 'success', __( 'Your bio was saved. Thank you!', 'ans-singers-portal' ) ),
 			'no_profile'       => array( 'error', __( 'Your account is not linked to a singer profile yet — please contact the Personnel Manager.', 'ans-singers-portal' ) ),
-			'missing_required' => array( 'error', __( 'Display name, at least one voice part and a valid email are required.', 'ans-singers-portal' ) ),
+			'missing_required' => array( 'error', __( 'Nothing was saved: add your display name, and check that your email address is typed correctly.', 'ans-singers-portal' ) ),
+			'saved_incomplete' => array( 'warning', self::incomplete_message() ),
 			'missing_headshot' => array( 'error', __( 'Please upload a headshot photo. Everything else was saved.', 'ans-singers-portal' ) ),
 			'upload_failed'    => array( 'error', __( 'The photo could not be uploaded (JPG, PNG, GIF or WebP only). Everything else was saved.', 'ans-singers-portal' ) ),
 		);
 		return isset( $map[ $code ] ) ? $map[ $code ] : null;
+	}
+
+	/**
+	 * "Saved - still missing: photo, phone." Built from the ?ansp_missing=
+	 * list, whitelisted, so nothing from the URL is echoed as-is.
+	 *
+	 * @return string
+	 */
+	protected static function incomplete_message() {
+		$labels = array(
+			'photo' => __( 'a headshot photo', 'ans-singers-portal' ),
+			'part'  => __( 'your voice part', 'ans-singers-portal' ),
+			'email' => __( 'your email', 'ans-singers-portal' ),
+			'phone' => __( 'your phone number', 'ans-singers-portal' ),
+			'bio'   => __( 'your bio', 'ans-singers-portal' ),
+			'year'  => __( 'the year you started with Ars Nova', 'ans-singers-portal' ),
+		);
+		$raw  = isset( $_GET['ansp_missing'] ) ? sanitize_text_field( wp_unslash( $_GET['ansp_missing'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- display-only.
+		$have = array();
+		foreach ( explode( ',', $raw ) as $key ) {
+			if ( isset( $labels[ $key ] ) ) {
+				$have[] = $labels[ $key ];
+			}
+		}
+		if ( ! $have ) {
+			return __( 'Saved. A few fields are still empty.', 'ans-singers-portal' );
+		}
+		/* translators: %s: comma-separated list of missing fields */
+		return sprintf( __( 'Saved. Still to add when you can: %s.', 'ans-singers-portal' ), implode( ', ', $have ) );
 	}
 }

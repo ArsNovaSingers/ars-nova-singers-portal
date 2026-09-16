@@ -773,7 +773,7 @@ class ANSP_Comp_Claim {
 			'note'        => (string) $order->get_meta( '_ans_comp_note' ),
 			'sent'        => $order->get_date_created() ? $order->get_date_created()->getTimestamp() : 0,
 			'resends'     => count( $resends ),
-			'last_resent' => $resends ? strtotime( (string) end( $resends ) ) : 0,
+			'last_resent' => $resends ? ANSP_Event_Venue::local_ts( (string) end( $resends ) ) : 0,
 			'tickets'     => count( $tickets ),
 			'used'        => $used,
 			'can_resend'  => count( $resends ) < self::RESEND_MAX,
@@ -870,7 +870,7 @@ class ANSP_Comp_Claim {
 
 		return array(
 			'title'    => html_entity_decode( get_the_title( $event_id ), ENT_QUOTES, 'UTF-8' ),
-			'ts'       => $when ? (int) strtotime( $when ) : 0,
+			'ts'       => $when ? ANSP_Event_Venue::local_ts( $when ) : 0, // 1.39.4: a real timestamp; shown with wp_date().
 			'location' => (string) get_post_meta( $event_id, 'event_location', true ),
 		);
 	}
@@ -1053,7 +1053,7 @@ class ANSP_Comp_Claim {
 			exit;
 		}
 
-		$last = $log ? (int) strtotime( (string) end( $log ) ) : 0;
+		$last = $log ? ANSP_Event_Venue::local_ts( (string) end( $log ) ) : 0; // current_time('mysql') is site-local; strtotime() read it as UTC and the cooldown never applied.
 		if ( $last && ( time() - $last ) < self::RESEND_COOLDOWN ) {
 			wp_safe_redirect( self::redirect_url( array( 'ansp_comp' => 'resend_wait' ) ) );
 			exit;

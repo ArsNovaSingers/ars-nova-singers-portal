@@ -279,6 +279,11 @@ if ( $ansp_season instanceof WP_Term ) {
 							<input type="hidden" name="project_id" value="<?php echo esc_attr( (string) $ansp_pid ); ?>" />
 							<?php wp_nonce_field( 'ansp_zip_' . $ansp_pid, 'ansp_zip_nonce' ); ?>
 
+							<div class="ansp-foldbar" data-ansp-foldbar>
+								<button type="button" class="ansp-btn ansp-btn--small ansp-btn--ghost" data-ansp-fold-all="open"><?php esc_html_e( 'Expand all', 'ans-singers-portal' ); ?></button>
+								<button type="button" class="ansp-btn ansp-btn--small ansp-btn--ghost" data-ansp-fold-all="close"><?php esc_html_e( 'Collapse all', 'ans-singers-portal' ); ?></button>
+							</div>
+
 							<?php if ( $ansp_any_zippable ) : ?>
 								<div class="ansp-matbar" data-ansp-matbar>
 									<button type="button" class="ansp-btn ansp-btn--small ansp-btn--ghost" data-ansp-select-all><?php esc_html_e( 'Select all', 'ans-singers-portal' ); ?></button>

@@ -122,7 +122,7 @@ $ansp_old       = ANSP_Comp_Claim::get_returned_rows();
 											>
 												<?php
 												$ansp_when = $ansp_perf['ts']
-													? date_i18n( get_option( 'date_format' ) . ', ' . get_option( 'time_format' ), $ansp_perf['ts'] )
+													? wp_date( get_option( 'date_format' ) . ', ' . get_option( 'time_format' ), $ansp_perf['ts'] ) /* 1.39.4: was date_i18n(), which printed a real timestamp as UTC - 6 h late */
 													: '';
 												echo esc_html( $ansp_perf['title'] );
 												if ( $ansp_when ) {

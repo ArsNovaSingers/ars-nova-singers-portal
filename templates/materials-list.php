@@ -60,7 +60,16 @@ $ansp_flat = ( 1 === count( $ansp_buckets ) && '' === $ansp_buckets[0]['piece'] 
 				: $ansp_bucket['piece'];
 			?>
 			<li class="ansp-piece<?php echo $ansp_is_other ? ' ansp-piece--other' : ''; ?>" data-ansp-piece>
-				<h4 class="ansp-piece-title"><?php echo esc_html( $ansp_piece_label ); ?></h4>
+				<?php
+				/*
+				 * 1.39.4: every piece folds, including "Rehearsal notes" and
+				 * "Other materials", which have no dropdowns inside and so
+				 * could not be collapsed before. Open by default, as the
+				 * dropdowns are - a singer should never have to hunt.
+				 */
+				?>
+				<details class="ansp-piecebox" data-ansp-fold open>
+				<summary class="ansp-piece-title"><span class="ansp-piece-label"><?php echo esc_html( $ansp_piece_label ); ?></span> <span class="ansp-piece-count"><?php echo esc_html( (string) count( $ansp_bucket['rows'] ) ); ?></span></summary>
 				<?php $ansp_sections = ANSP_Materials::group_by_type( $ansp_bucket['rows'] ); ?>
 				<?php if ( ! $ansp_sections ) : ?>
 					<ul class="ansp-piece-items">
@@ -79,7 +88,7 @@ $ansp_flat = ( 1 === count( $ansp_buckets ) && '' === $ansp_buckets[0]['piece'] 
 					</ul>
 				<?php else : ?>
 					<?php foreach ( $ansp_sections as $ansp_section ) : ?>
-						<details class="ansp-typesection" data-ansp-typesection open>
+						<details class="ansp-typesection" data-ansp-typesection data-ansp-fold open>
 							<summary class="ansp-typesection-title">
 								<span class="ansp-typesection-label"><?php echo esc_html( $ansp_section['label'] ); ?></span>
 								<span class="ansp-typesection-count"><?php echo esc_html( (string) count( $ansp_section['rows'] ) ); ?></span>
@@ -102,6 +111,7 @@ $ansp_flat = ( 1 === count( $ansp_buckets ) && '' === $ansp_buckets[0]['piece'] 
 						</details>
 					<?php endforeach; ?>
 				<?php endif; ?>
+				</details>
 			</li>
 		<?php endforeach; ?>
 	<?php endif; ?>

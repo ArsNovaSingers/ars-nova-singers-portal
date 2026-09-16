@@ -38,6 +38,7 @@ class ANSP_Profile_Link {
 	 */
 	public function __construct() {
 		add_action( 'show_user_profile', array( __CLASS__, 'render_field' ) );
+		add_action( 'admin_notices', array( __CLASS__, 'trash_notice' ) );
 		add_action( 'edit_user_profile', array( __CLASS__, 'render_field' ) );
 		add_action( 'personal_options_update', array( __CLASS__, 'save_field' ) );
 		add_action( 'edit_user_profile_update', array( __CLASS__, 'save_field' ) );
@@ -60,11 +61,46 @@ class ANSP_Profile_Link {
 	}
 
 	/**
+	 * Warn staff about singer logins whose profile is in the Trash.
+	 *
+	 * Since 1.39.4 such a login sees no music, so it should never go
+	 * unnoticed. Shown on the Users and Singers screens only.
+	 */
+	public static function trash_notice() {
+		if ( ! current_user_can( 'list_users' ) && ! current_user_can( 'ansp_manage_roster' ) ) {
+			return;
+		}
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		if ( ! $screen || ! ( 'users' === $screen->id || 'edit-singer' === $screen->id ) ) {
+			return;
+		}
+		$names = array();
+		foreach ( get_users( array( 'meta_key' => self::META, 'fields' => array( 'ID', 'display_name' ), 'number' => 500 ) ) as $u ) { // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+			$pid = (int) get_user_meta( $u->ID, self::META, true );
+			if ( $pid && 'trash' === get_post_status( $pid ) && user_can( (int) $u->ID, 'ansp_view_portal' ) ) {
+				$names[] = $u->display_name;
+			}
+		}
+		if ( ! $names ) {
+			return;
+		}
+		echo '<div class="notice notice-warning"><p>'
+			. esc_html(
+				sprintf(
+					/* translators: %s: names */
+					__( 'These singers can sign in but see no music, because their singer profile is in the Trash: %s. Restore the profile (it comes back as a draft) or link the login to another profile.', 'ans-singers-portal' ),
+					implode( ', ', $names )
+				)
+			)
+			. '</p></div>';
+	}
+
+	/**
 	 * Every singer profile as id => title, for the picker.
 	 *
 	 * @return array<int,string>
 	 */
-	protected static function profile_choices() {
+	protected static function profile_choices( $current = 0 ) {
 		$out = array();
 		$posts = get_posts(
 			array(
@@ -77,6 +113,11 @@ class ANSP_Profile_Link {
 		);
 		foreach ( $posts as $p ) {
 			$out[ $p->ID ] = get_the_title( $p );
+		}
+		// A linked profile in the Trash is not in 'any'. Without it here the
+		// picker shows "not linked" and saving the user would unlink it.
+		if ( $current && ! isset( $out[ $current ] ) && 'singer' === get_post_type( $current ) ) {
+			$out[ $current ] = get_the_title( $current ) . ' ' . __( '(in Trash)', 'ans-singers-portal' );
 		}
 		return $out;
 	}
@@ -145,7 +186,7 @@ class ANSP_Profile_Link {
 						<?php wp_nonce_field( 'ansp_save_profile_link', 'ansp_profile_link_nonce' ); ?>
 						<select name="ansp_singer_profile" id="ansp_singer_profile">
 							<option value="0"><?php esc_html_e( '— not linked —', 'ans-singers-portal' ); ?></option>
-							<?php foreach ( self::profile_choices() as $id => $title ) : ?>
+							<?php foreach ( self::profile_choices( $current ) as $id => $title ) : ?>
 								<option value="<?php echo esc_attr( (string) $id ); ?>" <?php selected( $current, $id ); ?>>
 									<?php echo esc_html( $title ); ?>
 								</option>
@@ -189,9 +230,9 @@ class ANSP_Profile_Link {
 		$profile_id = isset( $_POST['ansp_singer_profile'] ) ? (int) $_POST['ansp_singer_profile'] : 0;
 
 		if ( $profile_id && 'singer' === get_post_type( $profile_id ) ) {
-			update_user_meta( $user_id, self::META, $profile_id );
+			ANSP_Profiles::link( $user_id, $profile_id );
 		} else {
-			delete_user_meta( $user_id, self::META );
+			ANSP_Profiles::unlink_user( $user_id );
 		}
 	}
 
@@ -219,6 +260,9 @@ class ANSP_Profile_Link {
 			return $output;
 		}
 		$id = self::get_profile_id( $user_id );
+		if ( $id && 'trash' === get_post_status( $id ) ) {
+			return esc_html( get_the_title( $id ) ) . ' <span style="color:#b32d2e;">' . esc_html__( '(in Trash - no Hub music)', 'ans-singers-portal' ) . '</span>';
+		}
 		if ( $id ) {
 			return esc_html( get_the_title( $id ) );
 		}
@@ -315,7 +359,7 @@ class ANSP_Profile_Link {
 					continue;
 				}
 				if ( ! $dry_run ) {
-					update_user_meta( $user->ID, self::META, $guess );
+					ANSP_Profiles::link( $user->ID, $guess );
 				}
 				$results[] = array(
 					'user'    => $user->user_login,
@@ -360,7 +404,7 @@ class ANSP_Profile_Link {
 			}
 
 			if ( ! $dry_run ) {
-				update_user_meta( $user_id, self::META, $profile_id );
+				ANSP_Profiles::link( $user_id, $profile_id );
 			}
 
 			$results[] = array(

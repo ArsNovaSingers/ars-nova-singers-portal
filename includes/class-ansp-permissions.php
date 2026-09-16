@@ -63,6 +63,17 @@ class ANSP_Permissions {
 		if ( ! $profile_id || ! taxonomy_exists( 'ans_group' ) ) {
 			return array();
 		}
+		/*
+		 * 1.39.4: a profile in the Trash grants nothing. Before, it still gave
+		 * its groups' music while My Bio said "not linked" - the two halves of
+		 * the Hub disagreed about the same person. Drafts and private profiles
+		 * still count (a draft keeps a singer off the public Singers page, see
+		 * Singer_Profile_Trash_Finding_2026-09-03). Staff see a warning for any
+		 * login in this state (ANSP_Profile_Link::trash_notice).
+		 */
+		if ( 'trash' === get_post_status( $profile_id ) ) {
+			return array();
+		}
 
 		$slugs = wp_get_object_terms( $profile_id, 'ans_group', array( 'fields' => 'slugs' ) );
 		if ( is_wp_error( $slugs ) || ! is_array( $slugs ) ) {

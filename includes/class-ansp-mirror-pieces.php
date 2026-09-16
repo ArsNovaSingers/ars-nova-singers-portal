@@ -65,7 +65,7 @@ class ANSP_Mirror_Pieces {
 	 * The saved map for a project.
 	 *
 	 * @param int $project_id Project.
-	 * @return array work_id => array( piece, label, order, hidden )
+	 * @return array work_id => array( piece, label, section, order, hidden )
 	 */
 	public static function get_map( $project_id ) {
 		$map = get_post_meta( (int) $project_id, self::META, true );
@@ -91,7 +91,7 @@ class ANSP_Mirror_Pieces {
 				continue;
 			}
 			$current = isset( $map[ $work_id ] ) ? $map[ $work_id ] : array();
-			foreach ( array( 'piece', 'label' ) as $key ) {
+			foreach ( array( 'piece', 'label', 'section' ) as $key ) {
 				if ( array_key_exists( $key, $fields ) ) {
 					$current[ $key ] = trim( sanitize_text_field( (string) $fields[ $key ] ) );
 				}
@@ -213,45 +213,159 @@ class ANSP_Mirror_Pieces {
 	}
 
 	/**
-	 * Decide the piece for one mirror row, and say why.
+	 * A mirror folder as the list of Drive subfolders inside the concert.
+	 *
+	 * `_root` and the concert's own prefix are the concert folder itself, so
+	 * they come back empty. "Darkness & Light/Margutti/Click Tracks" with the
+	 * prefix "Darkness & Light" is array( 'Margutti', 'Click Tracks' ).
+	 *
+	 * @param string $folder Worker project key.
+	 * @param string $prefix The project's mirror prefix, '' for legacy projects.
+	 * @return string[]
+	 */
+	public static function folder_segments( $folder, $prefix = '' ) {
+		$folder = trim( str_replace( '\\', '/', (string) $folder ), '/' );
+		$prefix = trim( (string) $prefix, '/' );
+		if ( '' !== $prefix ) {
+			if ( $folder === $prefix ) {
+				return array();
+			}
+			if ( 0 === strpos( $folder, $prefix . '/' ) ) {
+				$folder = substr( $folder, strlen( $prefix ) + 1 );
+			}
+		}
+		if ( '' === $folder || '_root' === $folder ) {
+			return array();
+		}
+		return array_values( array_filter( explode( '/', $folder ), 'strlen' ) );
+	}
+
+	/**
+	 * A folder name as words: "ClickTracks", "click-tracks" and "Click_Tracks"
+	 * all read "Click Tracks"; "Aug29rehearsal" reads "Aug 29 rehearsal".
+	 *
+	 * @param string $name Folder name.
+	 * @param string $drop A word to leave out - the composer, when the folder
+	 *                     is already inside that composer's piece.
+	 * @return string
+	 */
+	public static function pretty_folder( $name, $drop = '' ) {
+		// "01 Click Tracks" / "2-Rehearsal Tracks": a number in front is how a
+		// person orders folders in Drive. It sorts the dropdowns and is not
+		// shown. Four digits are a year and stay.
+		$name  = preg_replace( '/^\d{1,2}(?=[\s._-])[\s._-]*(?=\S)/', '', (string) $name );
+		$name  = preg_replace( '/(?<=[a-z])(?=[A-Z])|(?<=[A-Za-z])(?=\d)|(?<=\d)(?=[A-Za-z])/', ' ', (string) $name );
+		$words = preg_split( '/[\s_\-]+/', trim( $name ) );
+		$out   = array();
+		foreach ( (array) $words as $word ) {
+			if ( '' === $word ) {
+				continue;
+			}
+			if ( '' !== $drop && 0 === strcasecmp( remove_accents( $word ), $drop ) ) {
+				continue;
+			}
+			$out[] = $word;
+		}
+		return implode( ' ', $out );
+	}
+
+	/**
+	 * Decide the piece and the dropdown for one mirror row, and say why.
+	 *
+	 * The dropdown is the Drive subfolder the file sits in (Jonathan,
+	 * 2026-09-15: "folders define dropdown groups"). When the first subfolder
+	 * is the one that named the piece - a composer folder - it is left out of
+	 * the dropdown's name, since the heading above already says it.
 	 *
 	 * @param array    $score  Worker library row.
 	 * @param string   $kind   Material type the row was read as.
 	 * @param array    $map    Saved map for the project.
 	 * @param string[] $pieces Piece labels on the project.
-	 * @return array( piece, source )
+	 * @param string   $prefix The project's mirror prefix.
+	 * @return array( piece, source, section, section sort key )
 	 */
-	public static function resolve( $score, $kind, $map, $pieces ) {
-		$work_id = isset( $score['work_id'] ) ? sanitize_key( (string) $score['work_id'] ) : '';
-		if ( '' !== $work_id && isset( $map[ $work_id ]['piece'] ) && '' !== $map[ $work_id ]['piece'] ) {
-			return array( $map[ $work_id ]['piece'], 'saved' );
-		}
+	public static function resolve( $score, $kind, $map, $pieces, $prefix = '' ) {
+		$work_id  = isset( $score['work_id'] ) ? sanitize_key( (string) $score['work_id'] ) : '';
+		$entry    = ( '' !== $work_id && isset( $map[ $work_id ] ) ) ? $map[ $work_id ] : array();
+		$segments = self::folder_segments( isset( $score['project'] ) ? (string) $score['project'] : '', $prefix );
+
+		list( $piece, $source, $used_folder ) = self::resolve_piece( $score, $kind, $entry, $pieces, $segments );
+
+		$sort = '';
 		if ( 'rehearsal_note' === $kind ) {
-			return array( __( 'Rehearsal notes', 'ans-singers-portal' ), 'notes' );
+			$section = '';
+		} else {
+			$parts = $segments;
+			$drop  = '';
+			if ( $used_folder && $parts ) {
+				$first = self::tokens( $parts[0] );
+				if ( 'folder' === $source ) {
+					// The top folder already IS the heading; only what is
+					// below it makes a dropdown.
+					array_shift( $parts );
+				} elseif ( 1 === count( $parts ) ) {
+					// A single folder named for the composer and the kind of
+					// thing - "Margutti-RehRecordings" - keeps the kind.
+					$drop = $first ? $first[0] : '';
+				} else {
+					array_shift( $parts );
+				}
+			}
+			$sort = implode( '/', $parts );
+			$named = array();
+			foreach ( $parts as $part ) {
+				$pretty = self::pretty_folder( $part, $drop );
+				if ( '' !== $pretty ) {
+					$named[] = $pretty;
+				}
+			}
+			$section = implode( ' / ', $named );
+		}
+		if ( ! empty( $entry['section'] ) ) {
+			$section = $entry['section'];
+			$sort    = $entry['section'];
 		}
 
-		$folder    = isset( $score['project'] ) ? (string) $score['project'] : '';
+		return array( $piece, $source, $section, $sort );
+	}
+
+	/**
+	 * The piece half of resolve().
+	 *
+	 * @return array( piece, source, bool whether the first folder named it )
+	 */
+	protected static function resolve_piece( $score, $kind, $entry, $pieces, $segments ) {
+		if ( isset( $entry['piece'] ) && '' !== $entry['piece'] ) {
+			return array( $entry['piece'], 'saved', false );
+		}
+		if ( 'rehearsal_note' === $kind ) {
+			return array( __( 'Rehearsal notes', 'ans-singers-portal' ), 'notes', false );
+		}
+
 		$canonical = isset( $score['canonical'] ) ? (string) $score['canonical'] : '';
 		$is_audio  = isset( $score['media'] ) && 'audio' === $score['media'];
 
 		// A recording's folder says more than its filename ("Mvt6-SOPclick");
 		// a score's filename leads with the composer by house convention.
-		$folder_leaf   = '_root' === $folder ? '' : basename( str_replace( '\\', '/', $folder ) );
-		$from_folder   = self::tokens( $folder_leaf );
+		$from_folder   = $segments ? self::tokens( $segments[0] ) : array();
 		$from_filename = self::tokens( preg_replace( '/^ANS[-_ ]+/i', '', $canonical ) );
 
-		$order = $is_audio ? array( $from_folder, $from_filename ) : array( $from_filename, $from_folder );
-		foreach ( $order as $tokens ) {
-			$piece = self::match_piece( $tokens, $pieces );
+		$order = $is_audio
+			? array( array( $from_folder, true ), array( $from_filename, false ) )
+			: array( array( $from_filename, false ), array( $from_folder, true ) );
+		foreach ( $order as $try ) {
+			$piece = self::match_piece( $try[0], $pieces );
 			if ( '' !== $piece ) {
-				return array( $piece, 'guessed' );
+				return array( $piece, 'guessed', $try[1] );
 			}
 		}
 
-		if ( $is_audio && '' !== $folder_leaf ) {
-			return array( $folder_leaf, 'folder' );
+		// No piece matched. A folder of recordings still reads as a group: its
+		// top folder becomes the heading and anything below it the dropdown.
+		if ( $is_audio && $segments ) {
+			return array( self::pretty_folder( $segments[0] ), 'folder', true );
 		}
-		return array( '', 'unfiled' );
+		return array( '', 'unfiled', false );
 	}
 
 	/**
@@ -268,23 +382,29 @@ class ANSP_Mirror_Pieces {
 		$map    = self::get_map( $project_id );
 		$pieces = self::hand_pieces( $project_id );
 		$linked = self::hand_linked_drive_ids( $project_id );
+		$prefix = ANSP_Scores_Source::project_prefix( $project_id );
 		$out    = array();
 
 		foreach ( $rows as $row ) {
 			$score   = isset( $row['_score'] ) ? $row['_score'] : array();
 			$src     = isset( $score['source_file_id'] ) ? (string) $score['source_file_id'] : '';
+			$kind    = isset( $row['_kind'] ) ? $row['_kind'] : $row['type'];
+			list( $piece, $source, $section, $section_sort ) = self::resolve( $score, $kind, $map, $pieces, $prefix );
 			if ( '' !== $src && isset( $linked[ $src ] ) ) {
 				// Somebody already put this exact Drive file on the project by
 				// hand, with their own label and piece. Theirs wins (P4) and the
 				// file is listed once. ANSP_Scores_Source::append_published_scores()
 				// does the merge: a score keeps the hand row's words but is served
 				// from the mirror; a recording keeps the hand row as it is.
+				// The hand row takes the folder's dropdown, so Zahnay's tracks
+				// sit in the same list as the click tracks from that folder.
 				unset( $row['_score'], $row['_kind'] );
 				$row['_merge_into'] = $src;
-				$out[]              = $row;
+				$row['section']      = $section;
+				$row['section_sort'] = $section_sort;
+				$out[]               = $row;
 				continue;
 			}
-			$kind    = isset( $row['_kind'] ) ? $row['_kind'] : $row['type'];
 			$work_id = isset( $score['work_id'] ) ? sanitize_key( (string) $score['work_id'] ) : '';
 			$entry   = ( '' !== $work_id && isset( $map[ $work_id ] ) ) ? $map[ $work_id ] : array();
 
@@ -292,7 +412,9 @@ class ANSP_Mirror_Pieces {
 				continue;
 			}
 
-			list( $row['piece'], $row['piece_source'] ) = self::resolve( $score, $kind, $map, $pieces );
+			$row['piece']        = $piece;
+			$row['piece_source'] = $source;
+			$row['section']      = $section;
 			if ( ! empty( $entry['label'] ) ) {
 				$row['title'] = $entry['label'];
 			}
@@ -338,12 +460,16 @@ class ANSP_Mirror_Pieces {
 		$map    = self::get_map( $project_id );
 		$pieces = self::hand_pieces( $project_id );
 		$linked = self::hand_linked_drive_ids( $project_id );
+		$prefix = ANSP_Scores_Source::project_prefix( $project_id );
 		$out    = array();
 		foreach ( ANSP_Scores_Source::mirror_scores_for_project( $project_id ) as $pair ) {
 			list( $score, $kind ) = $pair;
 			$work_id = sanitize_key( (string) $score['work_id'] );
 			$entry   = isset( $map[ $work_id ] ) ? $map[ $work_id ] : array();
-			list( $piece, $source ) = self::resolve( $score, $kind, $map, $pieces );
+			if ( isset( $score['media'] ) && 'audio' === $score['media'] ) {
+				$kind = 'recording';
+			}
+			list( $piece, $source, $section ) = self::resolve( $score, $kind, $map, $pieces, $prefix );
 			$out[] = array(
 				'work_id'   => $work_id,
 				'canonical' => isset( $score['canonical'] ) ? (string) $score['canonical'] : '',
@@ -352,7 +478,9 @@ class ANSP_Mirror_Pieces {
 				'kind'      => $kind,
 				'piece'     => $piece,
 				'source'    => $source,
+				'section'   => $section,
 				'label'     => isset( $entry['label'] ) ? $entry['label'] : '',
+				'saved_section' => isset( $entry['section'] ) ? $entry['section'] : '',
 				'order'     => isset( $entry['order'] ) ? $entry['order'] : '',
 				'hidden'    => ! empty( $entry['hidden'] ),
 				'shown_by_hand_row' => isset( $linked[ (string) ( isset( $score['source_file_id'] ) ? $score['source_file_id'] : '' ) ] ),
@@ -419,7 +547,7 @@ class ANSP_Mirror_Pieces {
 				'project_id'  => $id,
 				'hand_pieces' => self::hand_pieces( $id ),
 				'files'       => self::describe( $id ),
-				'note'        => 'source: saved = set by a person; guessed = composer/folder matched one piece; folder = a recording filed under its Drive folder; notes = rehearsal notes; unfiled = shown under Other materials. POST {entries: {work_id: {piece, label, order, hidden}}} to change; blanks clear.',
+				'note'        => 'source: saved = set by a person; guessed = composer/folder matched one piece; folder = a recording filed under its Drive folder; notes = rehearsal notes; unfiled = shown under Other materials. section = the dropdown the file sits in (its Drive subfolder unless saved). POST {entries: {work_id: {piece, label, section, order, hidden}}} to change; blanks clear.',
 			)
 		);
 	}
@@ -440,7 +568,7 @@ class ANSP_Mirror_Pieces {
 		}
 		$entries = $req->get_param( 'entries' );
 		if ( ! is_array( $entries ) || empty( $entries ) ) {
-			return new WP_Error( 'ansp_pieces_empty', 'Send entries: {work_id: {piece, label, order, hidden}}.', array( 'status' => 400 ) );
+			return new WP_Error( 'ansp_pieces_empty', 'Send entries: {work_id: {piece, label, section, order, hidden}}.', array( 'status' => 400 ) );
 		}
 		self::merge( $id, $entries );
 		return self::rest_get( $req );
@@ -484,7 +612,7 @@ class ANSP_Mirror_Pieces {
 			'unfiled' => __( 'Other materials', 'ans-singers-portal' ),
 		);
 		?>
-		<p class="description"><?php esc_html_e( 'Files published from Drive land here automatically. Leave Piece blank to accept the suggestion shown in grey; type a piece to override it. Label is what singers see instead of the filename. Hide keeps a file off the Hub for everyone.', 'ans-singers-portal' ); ?></p>
+		<p class="description"><?php esc_html_e( 'Files published from Drive land here automatically. Leave Piece blank to accept the suggestion shown in grey; type a piece to override it. Label is what singers see instead of the filename. Dropdown is the list the file sits in inside its piece - by default its Drive subfolder. Hide keeps a file off the Hub for everyone.', 'ans-singers-portal' ); ?></p>
 		<datalist id="ansp-mirror-piece-list">
 			<?php foreach ( self::hand_pieces( $post->ID ) as $piece ) : ?>
 				<option value="<?php echo esc_attr( $piece ); ?>"></option>
@@ -495,6 +623,7 @@ class ANSP_Mirror_Pieces {
 				<th><?php esc_html_e( 'File', 'ans-singers-portal' ); ?></th>
 				<th><?php esc_html_e( 'Piece', 'ans-singers-portal' ); ?></th>
 				<th><?php esc_html_e( 'Label', 'ans-singers-portal' ); ?></th>
+				<th><?php esc_html_e( 'Dropdown', 'ans-singers-portal' ); ?></th>
 				<th style="width:5em;"><?php esc_html_e( 'Order', 'ans-singers-portal' ); ?></th>
 				<th style="width:4em;"><?php esc_html_e( 'Hide', 'ans-singers-portal' ); ?></th>
 			</tr></thead>
@@ -513,6 +642,7 @@ class ANSP_Mirror_Pieces {
 						<?php endif; ?>
 					</td>
 					<td><input type="text" class="widefat" name="<?php echo esc_attr( $name ); ?>[label]" value="<?php echo esc_attr( $file['label'] ); ?>" placeholder="<?php echo esc_attr( $file['canonical'] ); ?>" /></td>
+					<td><input type="text" class="widefat" name="<?php echo esc_attr( $name ); ?>[section]" value="<?php echo esc_attr( $file['saved_section'] ); ?>" placeholder="<?php echo esc_attr( '' === $file['section'] ? __( 'by type', 'ans-singers-portal' ) : $file['section'] ); ?>" /></td>
 					<td><input type="number" class="small-text" name="<?php echo esc_attr( $name ); ?>[order]" value="<?php echo esc_attr( (string) $file['order'] ); ?>" /></td>
 					<td><input type="checkbox" name="<?php echo esc_attr( $name ); ?>[hidden]" value="1" <?php checked( $file['hidden'] ); ?> /></td>
 				</tr>
@@ -546,6 +676,7 @@ class ANSP_Mirror_Pieces {
 			$entries[ $work_id ] = array(
 				'piece'  => isset( $fields['piece'] ) ? $fields['piece'] : '',
 				'label'  => isset( $fields['label'] ) ? $fields['label'] : '',
+				'section' => isset( $fields['section'] ) ? $fields['section'] : '',
 				'order'  => isset( $fields['order'] ) ? $fields['order'] : '',
 				'hidden' => ! empty( $fields['hidden'] ),
 			);

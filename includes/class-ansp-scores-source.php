@@ -76,6 +76,22 @@ class ANSP_Scores_Source {
 	const META_AUDIO    = 'ansp_audio_project';
 
 	/**
+	 * 1.39.0: the project's own space in the mirror, and the folders the last
+	 * scan found there.
+	 *
+	 * META_PREFIX is handed to the worker as project_prefix, so this concert's
+	 * files publish under `<group>/<prefix>/...` and cannot collide with another
+	 * concert's folder of the same name. Empty means a project published before
+	 * 1.39.0 (Rivers & Streams), whose frozen paths stay exactly where they are.
+	 *
+	 * META_FOUND is written by every scan: each Drive subfolder becomes readable
+	 * the moment it exists, with nobody typing its name - Jonathan's "folders
+	 * define dropdown groups" only works if new folders simply appear.
+	 */
+	const META_PREFIX   = 'ansp_mirror_prefix';
+	const META_FOUND    = '_ansp_mirror_folders';
+
+	/**
 	 * Bumped whenever the worker URL or token changes.
 	 *
 	 * Library answers are cached per URL and group. Without this, changing the
@@ -295,6 +311,9 @@ class ANSP_Scores_Source {
 				if ( ANSP_Materials::drive_file_id( isset( $material['url'] ) ? (string) $material['url'] : '' ) !== $row['_merge_into'] ) {
 					continue;
 				}
+				if ( isset( $row['section'] ) ) {
+					$materials[ $i ]['section'] = $row['section'];
+				}
 				if ( 'recording' === $row['type'] ) {
 					break; // The hand row already plays it; nothing to gain.
 				}
@@ -503,13 +522,64 @@ class ANSP_Scores_Source {
 	 * @return array[]
 	 */
 	public static function all_mirror_targets( $project_id ) {
-		$all = array();
+		$all  = array();
+		$seen = array();
 		foreach ( array_keys( static::mirror_kinds() ) as $kind ) {
 			foreach ( static::mirror_targets( $project_id, $kind ) as $target ) {
 				$all[] = $target;
+				foreach ( $target['groups'] as $group ) {
+					$seen[ strtolower( $group . '/' . $target['project'] ) ] = true;
+				}
 			}
 		}
+		// Folders the last scan found, after the ones a person named - so a
+		// folder written in the notes box is still read as notes.
+		foreach ( static::found_folders( $project_id ) as $address ) {
+			$parts = explode( '/', $address, 2 );
+			if ( 2 !== count( $parts ) || isset( $seen[ strtolower( $address ) ] ) ) {
+				continue;
+			}
+			$all[] = array(
+				'kind'    => 'auto',
+				'groups'  => array( $parts[0] ),
+				'project' => $parts[1],
+			);
+		}
 		return $all;
+	}
+
+	/**
+	 * The project's mirror prefix. '' for projects published before 1.39.0.
+	 *
+	 * @param int $project_id Project.
+	 * @return string
+	 */
+	public static function project_prefix( $project_id ) {
+		return trim( (string) get_post_meta( (int) $project_id, self::META_PREFIX, true ), '/' );
+	}
+
+	/**
+	 * A prefix for a project that has never published: its title, made safe
+	 * to sit in an object path.
+	 *
+	 * @param int $project_id Project.
+	 * @return string
+	 */
+	public static function default_prefix( $project_id ) {
+		$title = wp_specialchars_decode( html_entity_decode( get_the_title( (int) $project_id ), ENT_QUOTES, 'UTF-8' ), ENT_QUOTES );
+		$title = trim( preg_replace( '#[\\/\x00-\x1F\x7F]+#', ' ', $title ) );
+		return '' === $title ? 'project-' . (int) $project_id : $title;
+	}
+
+	/**
+	 * "group/folder" addresses the last scan of this project found.
+	 *
+	 * @param int $project_id Project.
+	 * @return string[]
+	 */
+	public static function found_folders( $project_id ) {
+		$found = get_post_meta( (int) $project_id, self::META_FOUND, true );
+		return is_array( $found ) ? array_values( array_filter( array_map( 'strval', $found ), 'strlen' ) ) : array();
 	}
 
 	/**
@@ -662,7 +732,7 @@ class ANSP_Scores_Source {
 		 */
 		if ( 'audio' === $media ) {
 			$kind = 'recording';
-		} elseif ( 'recording' === $kind ) {
+		} elseif ( 'recording' === $kind || 'auto' === $kind ) {
 			$kind = 'sheet_music';
 		}
 
@@ -829,6 +899,23 @@ class ANSP_Scores_Source {
 				<?php endif; ?>
 			</p>
 		<?php endforeach; ?>
+		<?php
+		$ansp_prefix = self::project_prefix( $post->ID );
+		$ansp_found  = self::found_folders( $post->ID );
+		?>
+		<p class="description">
+			<strong><?php esc_html_e( 'This project\'s space in the mirror:', 'ans-singers-portal' ); ?></strong>
+			<?php echo '' === $ansp_prefix ? esc_html__( 'none (published before 1.39.0 - folder names are used as they are)', 'ans-singers-portal' ) : '<code>' . esc_html( $ansp_prefix ) . '</code>'; ?>
+		</p>
+		<?php if ( $ansp_found ) : ?>
+			<p class="description">
+				<strong><?php esc_html_e( 'Folders found by the last Rescan (read automatically):', 'ans-singers-portal' ); ?></strong><br />
+				<?php
+				echo implode( '<br />', array_map( static function ( $f ) { return '<code>' . esc_html( $f ) . '</code>'; }, $ansp_found ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in the map.
+				?>
+				<br /><?php esc_html_e( 'Only a rehearsal-notes folder needs typing above, so dated notes are shown as notes and publish without approval.', 'ans-singers-portal' ); ?>
+			</p>
+		<?php endif; ?>
 		<?php if ( ! self::is_configured() ) : ?>
 			<p class="description" style="color:#b32d2e;">
 				<?php esc_html_e( 'The mirror is not configured yet, so nothing will appear. Singers Portal → Sheet-Music Mirror.', 'ans-singers-portal' ); ?>

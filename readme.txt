@@ -4,7 +4,7 @@ Tags: members, portal, choir, private, materials
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.39.1
+Stable tag: 1.39.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -71,7 +71,7 @@ Since 1.2.0 there are no per-material grants: any logged-in portal member sees e
 
 == Changelog ==
 
-= Unreleased =
+= 1.39.2 =
 * **Rescan shows a moved file straight away.** 1.39.1 only cleared the Hub's five-minute library cache when a scan published something new. A move publishes nothing, so a file moved into another Drive folder disappeared from the Hub until the cache ran out, then came back under its new dropdown (found on staging with a real Drive move). Every successful scan now clears the cache. The Rescan Drive button also reports moved files ("1 file moved to a different dropdown.") and reloads the page for them, and the scan log records them.
 
 = 1.39.1 =

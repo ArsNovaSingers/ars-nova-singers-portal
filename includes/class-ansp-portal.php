@@ -151,6 +151,25 @@ function ansp_get_portal_url() {
  */
 function ansp_get_template( $template, $args = array() ) {
 	$file = ANSP_DIR . 'templates/' . sanitize_file_name( $template ) . '.php';
+
+	/**
+	 * Let an add-on plugin supply its own file for one Hub template.
+	 *
+	 * Added in 1.40.0 for the Practice add-on (ars-nova-practice), which replaces
+	 * the "This Week's Assignments" sub-tab (`group-assignments`) with weekly
+	 * practice tasks. A filter here is one line in the Hub and keeps the add-on
+	 * separate: switch the add-on off and the original template comes back.
+	 *
+	 * ⚠️ A replacement template renders INSIDE the Hub's permission-checked page,
+	 * but it is responsible for its own permission checks on anything it loads.
+	 * Nothing about this filter widens what a viewer may see.
+	 *
+	 * @param string $file     Absolute path of the template about to load.
+	 * @param string $template Template name, e.g. 'group-assignments'.
+	 * @param array  $args     Variables that will be extracted into it.
+	 */
+	$file = (string) apply_filters( 'ansp_template_file', $file, (string) $template, is_array( $args ) ? $args : array() );
+
 	if ( ! file_exists( $file ) ) {
 		return;
 	}

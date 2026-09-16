@@ -71,6 +71,9 @@ Since 1.2.0 there are no per-material grants: any logged-in portal member sees e
 
 == Changelog ==
 
+= Unreleased =
+* **Add-ons can supply a Hub template.** New filter `ansp_template_file` in `ansp_get_template()`, so the separate Practice add-on (`ars-nova-practice`) can replace the "This Week's Assignments" sub-tab. With the add-on switched off nothing changes.
+
 = 1.39.4 =
 Fixes from the 2026-09-16 singer access audit (claude/portal/Hub_Assignments_and_Access_Audit_2026-09-16.md).
 * **A login and its singer profile are always linked both ways.** Self-registration, the Users-screen picker and the `singers/link` REST route wrote only the user side, so the profile screen read "— Not linked —" for a working singer; the 2026-08-31 repair fixed the data but not these writers. All writers now go through `ANSP_Profiles::link()`, and a one-way link heals itself the next time the profile is read.

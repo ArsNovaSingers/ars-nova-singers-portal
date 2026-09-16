@@ -645,7 +645,13 @@ class ANSP_Scores_Source {
 		if ( '' === $wanted ) {
 			return false;
 		}
-		return self::normalise( isset( $score['project'] ) ? $score['project'] : '' ) === $wanted;
+		if ( self::normalise( isset( $score['project'] ) ? $score['project'] : '' ) === $wanted ) {
+			return true;
+		}
+		// 1.39.1: a file moved in Drive is still published at its first path
+		// (frozen) but is found under the folder it now sits in - otherwise
+		// emptying a folder would take its files off the Hub.
+		return ! empty( $score['folder'] ) && self::normalise( $score['folder'] ) === $wanted;
 	}
 
 	/**

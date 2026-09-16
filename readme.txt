@@ -71,11 +71,15 @@ Since 1.2.0 there are no per-material grants: any logged-in portal member sees e
 
 == Changelog ==
 
+= Unreleased =
+* **The hourly Drive scan is gone; managers get a Rescan Drive button instead.** Jonathan: the hourly job was wasteful - material arrives a few times a week, from a person who knows they just added it. Each project with a Drive folder now shows managers (never singers) a "Rescan Drive" button in the Singers Hub, with a note to click it when new materials are added. It runs the same scan as the project screen's Scan button: recordings and new dated rehearsal notes appear at once, and the page reloads when something was added; an updated score still waits for approval on the project screen. Updating the plugin removes the 1.38.0 schedule by itself. This also ends staging publishing into the shared production mirror on a timer.
+* Every scan is logged with who asked: `GET ars-nova/v1 portal/mirror/scans` (replaces `portal/mirror/autoscan`).
+
 = 1.38.0 =
 * **Rehearsal recordings reach the Hub from Drive, and every mirror file sits under its piece.** Requires ans-scores-worker 0.6.0, which publishes audio alongside scores. On Rivers & Streams the Margutti click tracks, the Tedesco movements and the 8/29 rehearsal take existed only in Tom's Google Doc: the worker threw away every non-PDF it walked, so nothing else could carry them.
 * Mirror files are filed under a piece by a per-project map (`_ansp_mirror_pieces`, keyed by work id): a saved entry wins; rehearsal notes go under "Rehearsal notes", newest first; otherwise a composer or Drive-folder word that names exactly one piece on the project files it there; a recording with no match goes under its Drive folder; anything else is Other materials. Until now each file was its own heading, named after its own filename. Editable on the project screen (Mirror files: piece and label) and over REST: `GET/POST ars-nova/v1 portal/project/<id>/pieces`. A saved entry can also relabel a file, order it, or hide it.
 * A file that a hand-entered row already links from Drive is listed once. A score keeps the hand row's words and is served from the mirror; a recording keeps the hand row as it is.
-* Drive is scanned hourly for every active project with a Drive folder. Recordings and new rehearsal notes publish themselves; a PDF that could be a new edition of a score still waits for a person. The project screen's Scan button goes through the same code. REST: `POST portal/project/<id>/scan`, `GET portal/mirror/staging`, `POST portal/mirror/publish`, `GET portal/mirror/autoscan`. The 9/10 rehearsal note was sitting in Drive because nothing had asked the worker to look since 9/4.
+* Drive was scanned hourly for every active project with a Drive folder (removed in 1.38.1 - see there). On a scan, recordings and new rehearsal notes publish themselves; a PDF that could be a new edition of a score still waits for a person. REST: `POST portal/project/<id>/scan`, `GET portal/mirror/staging`, `POST portal/mirror/publish`. The 9/10 rehearsal note was sitting in Drive because nothing had asked the worker to look since 9/4.
 * A recording served from the mirror plays with its own content type, and a downloaded mirror file keeps its readable name.
 
 = 1.37.0 =

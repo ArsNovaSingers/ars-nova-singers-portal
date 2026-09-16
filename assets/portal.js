@@ -154,6 +154,58 @@
 			} );
 		}
 
+		// ---- Rescan Drive (managers only; rendered server-side) ------------
+		Array.prototype.slice.call( root.querySelectorAll( '[data-ansp-check-drive]' ) ).forEach( function ( box ) {
+			var button = box.querySelector( '[data-ansp-check-drive-button]' );
+			var status = box.querySelector( '[data-ansp-check-drive-status]' );
+			if ( ! button ) {
+				return;
+			}
+			button.addEventListener( 'click', function () {
+				var cfg = window.anspPortal || {};
+				button.disabled = true;
+				if ( status ) {
+					status.classList.remove( 'is-error' );
+					status.textContent = cfg.driveBusy || 'Checking Drive…';
+				}
+				var body = new window.URLSearchParams();
+				body.append( 'action', 'ansp_check_drive' );
+				body.append( 'nonce', cfg.driveNonce || '' );
+				body.append( 'project_id', box.getAttribute( 'data-ansp-check-drive' ) || '' );
+				window.fetch( cfg.ajaxUrl || '/wp-admin/admin-ajax.php', {
+					method: 'POST',
+					credentials: 'same-origin',
+					headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+					body: body.toString()
+				} )
+					.then( function ( response ) {
+						return response.json();
+					} )
+					.then( function ( data ) {
+						var ok = data && data.success && data.data;
+						var message = ( data && data.data && data.data.message ) ? data.data.message : ( cfg.driveError || 'Drive could not be checked.' );
+						if ( status ) {
+							status.textContent = message;
+							status.classList.toggle( 'is-error', ! ok );
+						}
+						if ( ok && data.data.reload ) {
+							window.setTimeout( function () {
+								window.location.reload();
+							}, 1500 );
+						}
+					} )
+					.catch( function () {
+						if ( status ) {
+							status.textContent = cfg.driveError || 'Drive could not be checked.';
+							status.classList.add( 'is-error' );
+						}
+					} )
+					.then( function () {
+						button.disabled = false;
+					} );
+			} );
+		} );
+
 		// ---- Material tag filter + selection ------------------------------
 		var filterScopes = Array.prototype.slice.call( root.querySelectorAll( '[data-ansp-material-filter-scope]' ) );
 		filterScopes.forEach( function ( scope ) {

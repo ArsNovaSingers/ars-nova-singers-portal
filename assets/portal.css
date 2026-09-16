@@ -1473,3 +1473,10 @@
 		height: 70vh;
 	}
 }
+
+/* Rescan Drive (managers only, 1.38.1) */
+.ansp-check-drive{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .75rem;margin:.5rem 0 1rem;padding:.6rem .75rem;border:1px dashed #c3c4c7;border-radius:6px;background:#f6f7f9;font-size:.85rem}
+.ansp-check-drive-note{color:#50575e}
+.ansp-check-drive-status{flex-basis:100%;font-weight:600}
+.ansp-check-drive-status:empty{display:none}
+.ansp-check-drive-status.is-error{color:#b32d2e}

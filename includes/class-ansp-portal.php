@@ -43,6 +43,9 @@ class ANSP_Portal {
 			array(
 				'ajaxUrl'      => admin_url( 'admin-ajax.php' ),
 				'aiNonce'      => wp_create_nonce( 'ansp_ai_bio' ),
+				'driveNonce'   => wp_create_nonce( 'ansp_check_drive' ),
+				'driveBusy'    => __( 'Checking Drive… this can take a minute when there are new recordings.', 'ans-singers-portal' ),
+				'driveError'   => __( 'Drive could not be checked just now. Try again in a moment.', 'ans-singers-portal' ),
 				'hasGeminiKey' => '' !== trim( (string) get_option( 'ansp_gemini_api_key', '' ) ),
 				'composing'    => __( 'Composing your draft…', 'ans-singers-portal' ),
 				'noKeyMessage' => __( "AI compose isn't set up yet — add a Gemini API key in Singers Portal → Settings.", 'ans-singers-portal' ),

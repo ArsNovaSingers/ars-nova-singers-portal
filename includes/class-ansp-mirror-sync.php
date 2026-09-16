@@ -1,22 +1,27 @@
 <?php
 /**
- * Keeping the mirror current without anybody remembering to press Scan.
+ * Asking the worker to look at Drive, when a person says there is something new.
  *
  * WHY THIS EXISTS. Tom's 9/10 rehearsal note sat in Drive and never reached a
- * singer. Nothing was broken: the worker only looks at Drive when someone asks
- * it to, and the only thing that asked was the Scan button on the project
- * screen. The last scan of Rivers & Streams was 2026-09-04. Everything since
- * was invisible by design.
+ * singer: the worker only looks at Drive when asked, and the only thing that
+ * asked was a Scan button buried in wp-admin. The last scan of Rivers &
+ * Streams had been 2026-09-04.
  *
- * Three pieces:
+ * 1.38.0 answered that with an hourly job. Jonathan removed it in 1.38.1 as
+ * wasteful: material arrives a few times a week, from a person who knows
+ * they just added it. Twenty-four scans a day to catch that is the wrong
+ * shape. The fix is to put the button where that person already is - on the
+ * project in the Singers Hub - and make it one click. (The hourly job also ran
+ * on staging, which shares the production mirror, so staging could publish
+ * for real without anybody deciding to. A button does not.)
  *
  *   scan_project()  the one way this site asks the worker to look at a
- *                   project's Drive folder. The project screen's Scan button,
- *                   the REST route and the hourly job all come through here,
- *                   so they cannot disagree about what gets auto-published.
- *   the hourly job  scans every active project that has a Drive folder set.
- *                   A scan of an unchanged folder downloads nothing - the
- *                   worker's cursor skips it - so hourly costs a Drive listing.
+ *                   project's Drive folder. The Hub's "Check Drive for new
+ *                   files" button, the project screen's Scan button and the
+ *                   REST route all come through here, so they cannot
+ *                   disagree about what gets auto-published. Every call is
+ *                   logged.
+ *   the Hub button  managers only, on each project that has a Drive folder.
  *   REST            scan, see what is waiting, and decide it, from a session
  *                   that holds no worker token.
  *
@@ -36,34 +41,40 @@ defined( 'ABSPATH' ) || exit;
  */
 class ANSP_Mirror_Sync {
 
+	/** The 1.38.0 hourly job's hook. Kept only so it can be cleared. */
 	const CRON_HOOK = 'ansp_mirror_autoscan';
-	const OPT_LOG   = 'ansp_mirror_autoscan_log';
+	const OPT_LOG   = 'ansp_mirror_scan_log';
 	const LOG_KEEP  = 40;
+
+	/** admin-ajax action and nonce for the Hub button. */
+	const AJAX_ACTION = 'ansp_check_drive';
 
 	/** Rounds per project per run. The worker examines 25 changed files a round. */
 	const MAX_ROUNDS = 6;
 
 	/**
-	 * Hook up. The schedule heals itself: if the event is missing it is added,
-	 * so a plugin update is enough and nobody has to re-activate anything.
+	 * Hook up.
 	 */
 	public static function init() {
-		add_action( self::CRON_HOOK, array( __CLASS__, 'run_all' ) );
-		add_action( 'init', array( __CLASS__, 'ensure_scheduled' ) );
+		add_action( 'init', array( __CLASS__, 'unschedule_legacy' ) );
 		add_action( 'rest_api_init', array( __CLASS__, 'register_routes' ) );
+		add_action( 'wp_ajax_' . self::AJAX_ACTION, array( __CLASS__, 'ajax_check_drive' ) );
 	}
 
 	/**
-	 * Schedule the hourly job if it is not already.
+	 * Remove 1.38.0's hourly job from any site that still has it scheduled.
+	 * A plugin update does not run the deactivation hook, so this is what
+	 * actually takes it off LIVE and staging.
 	 */
-	public static function ensure_scheduled() {
-		if ( ! wp_next_scheduled( self::CRON_HOOK ) ) {
-			wp_schedule_event( time() + 5 * MINUTE_IN_SECONDS, 'hourly', self::CRON_HOOK );
+	public static function unschedule_legacy() {
+		if ( wp_next_scheduled( self::CRON_HOOK ) ) {
+			self::unschedule();
+			delete_option( 'ansp_mirror_autoscan_log' );
 		}
 	}
 
 	/**
-	 * Remove the job. Called on plugin deactivation.
+	 * Remove the job. Called on plugin deactivation and by unschedule_legacy().
 	 */
 	public static function unschedule() {
 		wp_clear_scheduled_hook( self::CRON_HOOK );
@@ -139,6 +150,7 @@ class ANSP_Mirror_Sync {
 			);
 			if ( is_wp_error( $res ) ) {
 				if ( 0 === $summary['rounds'] ) {
+					self::log( $project_id, $res, $actor );
 					return $res;
 				}
 				$summary['problems'][] = $res->get_error_message();
@@ -170,53 +182,23 @@ class ANSP_Mirror_Sync {
 			// Singers should see new files on their next page load, not in five minutes.
 			ANSP_Scores_Source::bust_cache();
 		}
+		self::log( $project_id, $summary, $actor );
 		return $summary;
 	}
 
 	/**
-	 * The hourly job.
-	 */
-	public static function run_all() {
-		if ( ! ANSP_Scores_Source::is_configured() ) {
-			return;
-		}
-		$ids = get_posts(
-			array(
-				'post_type'        => ANSP_CPT::POST_TYPE,
-				'post_status'      => 'publish',
-				'numberposts'      => 100,
-				'fields'           => 'ids',
-				'meta_query'       => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-					array(
-						'key'     => ANSP_Sheet_Music_Box::META_FOLDER_ID,
-						'value'   => '',
-						'compare' => '!=',
-					),
-				),
-				'suppress_filters' => false,
-			)
-		);
-		foreach ( (array) $ids as $id ) {
-			if ( 'archived' === get_post_meta( (int) $id, 'ansp_project_status', true ) ) {
-				continue;
-			}
-			$result = self::scan_project( (int) $id, 'hub-autoscan', self::MAX_ROUNDS );
-			self::log( (int) $id, $result );
-		}
-	}
-
-	/**
-	 * Keep a short record of what the job did, readable over REST.
+	 * Keep a short record of every scan and who asked for it, readable over REST.
 	 *
 	 * @param int            $project_id Project.
 	 * @param array|WP_Error $result     scan_project() result.
 	 */
-	protected static function log( $project_id, $result ) {
+	protected static function log( $project_id, $result, $actor = '' ) {
 		$log   = get_option( self::OPT_LOG, array() );
 		$log   = is_array( $log ) ? $log : array();
 		$entry = array(
 			'at'         => gmdate( 'c' ),
 			'project_id' => $project_id,
+			'by'         => $actor,
 		);
 		if ( is_wp_error( $result ) ) {
 			$entry['error'] = $result->get_error_message();
@@ -268,11 +250,11 @@ class ANSP_Mirror_Sync {
 		);
 		register_rest_route(
 			'ars-nova/v1',
-			'/portal/mirror/autoscan',
+			'/portal/mirror/scans',
 			array(
 				'methods'             => 'GET',
 				'permission_callback' => $perm,
-				'callback'            => array( __CLASS__, 'rest_autoscan' ),
+				'callback'            => array( __CLASS__, 'rest_scans' ),
 			)
 		);
 	}
@@ -431,17 +413,110 @@ class ANSP_Mirror_Sync {
 	}
 
 	/**
-	 * GET portal/mirror/autoscan
+	 * GET portal/mirror/scans - the last 40 scans, newest first, and who asked.
 	 *
 	 * @return WP_REST_Response
 	 */
-	public static function rest_autoscan() {
-		$next = wp_next_scheduled( self::CRON_HOOK );
+	public static function rest_scans() {
 		return rest_ensure_response(
 			array(
-				'ok'       => true,
-				'next_run' => $next ? gmdate( 'c', $next ) : null,
-				'log'      => get_option( self::OPT_LOG, array() ),
+				'ok'  => true,
+				'log' => get_option( self::OPT_LOG, array() ),
+			)
+		);
+	}
+
+	/* -------------------------------------------------------------------
+	 * The Hub button
+	 * ---------------------------------------------------------------- */
+
+	/**
+	 * May this user press the button, and does this project have a folder?
+	 *
+	 * @param int $project_id Project.
+	 * @param int $user_id    User.
+	 * @return bool
+	 */
+	public static function can_check( $project_id, $user_id = 0 ) {
+		$user_id = $user_id ? (int) $user_id : get_current_user_id();
+		if ( ! $user_id || ! ANSP_Permissions::is_manager( $user_id ) ) {
+			return false;
+		}
+		if ( ! ANSP_Scores_Source::is_configured() ) {
+			return false;
+		}
+		return '' !== (string) get_post_meta( (int) $project_id, ANSP_Sheet_Music_Box::META_FOLDER_ID, true );
+	}
+
+	/**
+	 * Render the button for one project. Nothing for anyone else.
+	 *
+	 * @param int $project_id Project.
+	 */
+	public static function render_button( $project_id ) {
+		if ( ! self::can_check( $project_id ) ) {
+			return;
+		}
+		?>
+		<div class="ansp-check-drive" data-ansp-check-drive="<?php echo esc_attr( (string) (int) $project_id ); ?>">
+			<button type="button" class="ansp-btn ansp-btn--small" data-ansp-check-drive-button>
+				<?php esc_html_e( 'Rescan Drive', 'ans-singers-portal' ); ?>
+			</button>
+			<span class="ansp-check-drive-note">
+				<?php esc_html_e( 'Added new materials to this project\'s Drive folder? Click Rescan so they appear here. Only managers see this.', 'ans-singers-portal' ); ?>
+			</span>
+			<span class="ansp-check-drive-status" data-ansp-check-drive-status role="status" aria-live="polite"></span>
+		</div>
+		<?php
+	}
+
+	/**
+	 * admin-ajax: scan one project now.
+	 */
+	public static function ajax_check_drive() {
+		check_ajax_referer( self::AJAX_ACTION, 'nonce' );
+		$project_id = isset( $_POST['project_id'] ) ? absint( wp_unslash( $_POST['project_id'] ) ) : 0;
+		$post       = $project_id ? get_post( $project_id ) : null;
+		if ( ! $post || ANSP_CPT::POST_TYPE !== $post->post_type || ! self::can_check( $project_id ) ) {
+			wp_send_json_error( array( 'message' => __( 'You cannot check Drive for this project.', 'ans-singers-portal' ) ), 403 );
+		}
+		if ( function_exists( 'set_time_limit' ) ) {
+			@set_time_limit( 0 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		}
+
+		$user   = wp_get_current_user();
+		$result = self::scan_project( $project_id, (string) $user->user_email, self::MAX_ROUNDS );
+		if ( is_wp_error( $result ) ) {
+			wp_send_json_error( array( 'message' => $result->get_error_message() ), 502 );
+		}
+
+		$added   = count( $result['published'] );
+		$waiting = count( $result['staged'] );
+		$parts   = array();
+		if ( $added ) {
+			/* translators: %d: number of files */
+			$parts[] = sprintf( _n( '%d new file added.', '%d new files added.', $added, 'ans-singers-portal' ), $added );
+		}
+		if ( $waiting ) {
+			/* translators: %d: number of files */
+			$parts[] = sprintf( _n( '%d updated score is waiting for approval on the project screen.', '%d updated scores are waiting for approval on the project screen.', $waiting, 'ans-singers-portal' ), $waiting );
+		}
+		if ( $result['remaining'] > 0 ) {
+			$parts[] = __( 'More files are still waiting to be checked - press again.', 'ans-singers-portal' );
+		}
+		if ( $result['problems'] ) {
+			$parts[] = __( 'Some files could not be read - see the project screen.', 'ans-singers-portal' );
+		}
+		if ( ! $parts ) {
+			$parts[] = __( 'Nothing new in Drive.', 'ans-singers-portal' );
+		}
+
+		wp_send_json_success(
+			array(
+				'added'   => $added,
+				'waiting' => $waiting,
+				'message' => implode( ' ', $parts ),
+				'reload'  => $added > 0,
 			)
 		);
 	}

@@ -202,6 +202,11 @@ if ( $ansp_season instanceof WP_Term ) {
 					<?php endif; ?>
 				</div>
 
+				<?php
+				// Managers only: pull in whatever was just added to Drive (1.38.1).
+				ANSP_Mirror_Sync::render_button( $ansp_pid );
+				?>
+
 				<?php if ( $ansp_desc ) : ?>
 					<div class="ansp-project-description"><?php echo wp_kses_post( wpautop( $ansp_desc ) ); ?></div>
 				<?php endif; ?>

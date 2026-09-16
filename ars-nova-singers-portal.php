@@ -111,7 +111,7 @@ function ansp_init() {
 	ANSP_Sheet_Music_Box::init();  // Set folder -> scan -> name -> add, on the project itself.
 	ANSP_Player::init();  // Inline playback for rehearsal recordings.
 	ANSP_Mirror_Pieces::init();  // Which piece a mirror file sits under, and its label.
-	ANSP_Mirror_Sync::init();  // Hourly Drive scan; recordings and new notes publish themselves.
+	ANSP_Mirror_Sync::init();  // Rescan Drive button; recordings and new notes publish themselves on a scan.
 	ANSP_Venue::init();  // Venues: capacity, address and access notes on a real record.
 	ANSP_Comp_Allowance::init();  // Comps per singer, set on the Project.
 	ANSP_Project_Ticketing::init();  // Project <-> Tickera event_category, auto-linked.

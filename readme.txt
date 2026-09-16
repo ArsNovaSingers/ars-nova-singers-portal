@@ -4,7 +4,7 @@ Tags: members, portal, choir, private, materials
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.39.3
+Stable tag: 1.39.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -71,7 +71,7 @@ Since 1.2.0 there are no per-material grants: any logged-in portal member sees e
 
 == Changelog ==
 
-= Unreleased =
+= 1.39.4 =
 Fixes from the 2026-09-16 singer access audit (claude/portal/Hub_Assignments_and_Access_Audit_2026-09-16.md).
 * **A login and its singer profile are always linked both ways.** Self-registration, the Users-screen picker and the `singers/link` REST route wrote only the user side, so the profile screen read "— Not linked —" for a working singer; the 2026-08-31 repair fixed the data but not these writers. All writers now go through `ANSP_Profiles::link()`, and a one-way link heals itself the next time the profile is read.
 * **Saving a singer profile no longer unlinks its owner.** The profile screen's "Linked user account" list only offered four roles; Zahnay's role changed to `ans_executive_director`, and the next save of Zahnay's profile quietly removed the link. The list now offers every user, and the link is only changed when that field is on the form. The Users-screen picker also keeps a linked profile that is in the Trash, labelled "(in Trash)".

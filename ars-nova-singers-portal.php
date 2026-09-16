@@ -64,6 +64,8 @@ require_once ANSP_DIR . 'includes/class-ansp-mirror-rest.php';
 require_once ANSP_DIR . 'includes/class-ansp-dav.php';
 require_once ANSP_DIR . 'includes/class-ansp-sheet-music-box.php';
 require_once ANSP_DIR . 'includes/class-ansp-player.php';
+require_once ANSP_DIR . 'includes/class-ansp-mirror-pieces.php';
+require_once ANSP_DIR . 'includes/class-ansp-mirror-sync.php';
 require_once ANSP_DIR . 'includes/class-ansp-venue.php';
 require_once ANSP_DIR . 'includes/class-ansp-comp-allowance.php';
 require_once ANSP_DIR . 'includes/class-ansp-project-ticketing.php';
@@ -108,6 +110,8 @@ function ansp_init() {
 	ANSP_Mirror_Rest::init();  // REST routes so the mirror can be configured without wp-admin.
 	ANSP_Sheet_Music_Box::init();  // Set folder -> scan -> name -> add, on the project itself.
 	ANSP_Player::init();  // Inline playback for rehearsal recordings.
+	ANSP_Mirror_Pieces::init();  // Which piece a mirror file sits under, and its label.
+	ANSP_Mirror_Sync::init();  // Hourly Drive scan; recordings and new notes publish themselves.
 	ANSP_Venue::init();  // Venues: capacity, address and access notes on a real record.
 	ANSP_Comp_Allowance::init();  // Comps per singer, set on the Project.
 	ANSP_Project_Ticketing::init();  // Project <-> Tickera event_category, auto-linked.
@@ -165,6 +169,9 @@ register_activation_hook( ANSP_FILE, 'ansp_activate' );
  * @return void
  */
 function ansp_deactivate() {
+	if ( class_exists( 'ANSP_Mirror_Sync' ) ) {
+		ANSP_Mirror_Sync::unschedule();
+	}
 	flush_rewrite_rules();
 }
 register_deactivation_hook( ANSP_FILE, 'ansp_deactivate' );

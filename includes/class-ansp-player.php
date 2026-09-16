@@ -152,7 +152,10 @@ class ANSP_Player {
 		}
 
 		$name = isset( $row['title'] ) ? (string) $row['title'] : 'recording';
-		self::stream_range( $cached, $name, 'audio/mpeg' );
+		// Mirror rows say what they are (1.38.0); a hand-entered Drive link does
+		// not, and every one of those to date has been an mp3.
+		$mime = ( isset( $row['mime'] ) && 0 === strpos( (string) $row['mime'], 'audio/' ) ) ? (string) $row['mime'] : 'audio/mpeg';
+		self::stream_range( $cached, $name, $mime );
 	}
 
 	/**

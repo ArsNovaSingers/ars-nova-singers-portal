@@ -171,7 +171,7 @@ class ANSP_Sheet_Music_Box {
 	 * @param int    $timeout Seconds.
 	 * @return array|WP_Error
 	 */
-	protected static function worker( $path, $method = 'GET', $body = null, $timeout = 30 ) {
+	public static function worker( $path, $method = 'GET', $body = null, $timeout = 30 ) {
 		if ( ! class_exists( 'ANSP_Scores_Source' ) ) {
 			return new WP_Error( 'ansp_no_source', __( 'The sheet-music integration is not available.', 'ans-singers-portal' ) );
 		}
@@ -329,13 +329,16 @@ class ANSP_Sheet_Music_Box {
 			);
 		}
 
-		// Scanning downloads and fingerprints every changed PDF, and these run
-		// to hundreds of megabytes. Minutes, not seconds.
-		$res = self::worker( '/scan', 'POST', array( 'group' => $group, 'folder_id' => $folder ), 300 );
+		// Scanning downloads and fingerprints every changed file, and these run
+		// to hundreds of megabytes. Minutes, not seconds. Goes through
+		// ANSP_Mirror_Sync so this button, the REST route and the hourly job
+		// all auto-publish exactly the same things (recordings, new notes).
+		$user = wp_get_current_user();
+		$res  = ANSP_Mirror_Sync::scan_project( $post_id, $user->exists() ? $user->user_email : 'hub' );
 		if ( is_wp_error( $res ) ) {
 			wp_send_json_error( array( 'message' => $res->get_error_message() ) );
 		}
-		wp_send_json_success( self::pending_payload( $group, $res ) );
+		wp_send_json_success( self::pending_payload( $group, $res['last'] ) );
 	}
 
 	/**

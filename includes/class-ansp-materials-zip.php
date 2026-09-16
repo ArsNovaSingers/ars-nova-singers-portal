@@ -293,7 +293,9 @@ class ANSP_Materials_Zip {
 	 * @return array|WP_Error
 	 */
 	protected static function fetch_url( $url, $fallback ) {
-		$name = basename( (string) wp_parse_url( $url, PHP_URL_PATH ) );
+		// Decoded: a mirror recording published as "1-Prologo e Balada.mp3"
+		// arrives here as 1-Prologo%20e%20Balada.mp3 and should not be saved so.
+		$name = sanitize_file_name( rawurldecode( basename( (string) wp_parse_url( $url, PHP_URL_PATH ) ) ) );
 		if ( '' === $name ) {
 			$name = $fallback;
 		}

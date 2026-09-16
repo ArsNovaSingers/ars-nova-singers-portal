@@ -266,33 +266,84 @@ class ANSP_Scores_Source {
 			return $materials;
 		}
 
-		$seen  = array();
 		$added = array();
-
-		foreach ( static::all_mirror_targets( $project_id ) as $target ) {
-			$wanted_project = $target['project'];
-			foreach ( $target['groups'] as $group_slug ) {
-				foreach ( static::library( $group_slug ) as $score ) {
-					if ( ! is_array( $score ) || empty( $score['work_id'] ) ) {
-						continue;
-					}
-					// A singer holding two groups that both publish the same work sees it once.
-					if ( isset( $seen[ $score['work_id'] ] ) ) {
-						continue;
-					}
-					if ( ! self::score_belongs_to_project( $score, $wanted_project ) ) {
-						continue;
-					}
-					$seen[ $score['work_id'] ] = true;
-					$added[]                   = self::to_material_row( $score, $group_slug, $project_id, $target['kind'] );
-				}
-			}
+		foreach ( static::mirror_scores_for_project( $project_id ) as $pair ) {
+			list( $score, $kind, $group_slug ) = $pair;
+			$added[] = self::to_material_row( $score, $group_slug, $project_id, $kind );
 		}
 
 		if ( empty( $added ) ) {
 			return $materials;
 		}
-		return array_merge( $materials, $added );
+
+		// Piece, label, order and hide come from the project's piece map
+		// (1.38.0). Before that every row was filed under its own filename.
+		if ( class_exists( 'ANSP_Mirror_Pieces' ) ) {
+			$added = ANSP_Mirror_Pieces::apply( $added, $project_id );
+		}
+
+		$keep = array();
+		foreach ( $added as $row ) {
+			if ( empty( $row['_merge_into'] ) ) {
+				$keep[] = $row;
+				continue;
+			}
+			// The same Drive file is already on the page as a hand-entered row.
+			// List it once. If this viewer cannot see the hand row, they do not
+			// get the file through the back door either.
+			foreach ( $materials as $i => $material ) {
+				if ( ANSP_Materials::drive_file_id( isset( $material['url'] ) ? (string) $material['url'] : '' ) !== $row['_merge_into'] ) {
+					continue;
+				}
+				if ( 'recording' === $row['type'] ) {
+					break; // The hand row already plays it; nothing to gain.
+				}
+				// A score: keep the words a person chose, serve the mirror copy -
+				// the frozen-name, versioned file singers' annotations are bound to.
+				$materials[ $i ]['id']     = $row['id'];
+				$materials[ $i ]['url']    = $row['url'];
+				$materials[ $i ]['source'] = $row['source'];
+				$materials[ $i ]['mime']   = $row['mime'];
+				if ( empty( $material['note'] ) && ! empty( $row['note'] ) ) {
+					$materials[ $i ]['note'] = $row['note'];
+				}
+				break;
+			}
+		}
+		return array_merge( $materials, $keep );
+	}
+
+	/**
+	 * Every published file this project reads, once each, with the material
+	 * type its folder was named as and the group it came from.
+	 *
+	 * A singer holding two groups that both publish the same work sees it
+	 * once, so the first address to claim a work keeps it.
+	 *
+	 * @param int $project_id Project post ID.
+	 * @return array[] Each: array( score, kind, group ).
+	 */
+	public static function mirror_scores_for_project( $project_id ) {
+		$seen = array();
+		$out  = array();
+		foreach ( static::all_mirror_targets( (int) $project_id ) as $target ) {
+			foreach ( $target['groups'] as $group_slug ) {
+				foreach ( static::library( $group_slug ) as $score ) {
+					if ( ! is_array( $score ) || empty( $score['work_id'] ) ) {
+						continue;
+					}
+					if ( isset( $seen[ $score['work_id'] ] ) ) {
+						continue;
+					}
+					if ( ! self::score_belongs_to_project( $score, $target['project'] ) ) {
+						continue;
+					}
+					$seen[ $score['work_id'] ] = true;
+					$out[]                     = array( $score, $target['kind'], $group_slug );
+				}
+			}
+		}
+		return $out;
 	}
 
 	/**
@@ -440,7 +491,7 @@ class ANSP_Scores_Source {
 			'recording'      => array(
 				'meta'  => self::META_AUDIO,
 				'label' => __( 'Recording folders', 'ans-singers-portal' ),
-				'help'  => __( 'Rehearsal audio and click tracks. Note the worker publishes PDFs only today, so this stays empty until that changes.', 'ans-singers-portal' ),
+				'help'  => __( 'Rehearsal audio and click tracks (the worker publishes audio since 0.6.0). A recording found in any folder above is shown as a recording anyway; this box is for folders that hold only audio.', 'ans-singers-portal' ),
 			),
 		);
 	}
@@ -602,6 +653,23 @@ class ANSP_Scores_Source {
 			);
 		}
 
+		$media   = isset( $score['media'] ) ? (string) $score['media'] : 'pdf';
+		/*
+		 * What the file IS overrides which box its folder was written in. The
+		 * worker has published audio since 0.6.0 and says so per row, so a
+		 * recording sitting loose beside the scores (Bernstein-Somewhere.mp3 in
+		 * Rivers & Streams) is a recording, not a score with no pages.
+		 */
+		if ( 'audio' === $media ) {
+			$kind = 'recording';
+		} elseif ( 'recording' === $kind ) {
+			$kind = 'sheet_music';
+		}
+
+		if ( 'recording' === $kind ) {
+			$note = '';
+		}
+
 		$is_note = ( 'rehearsal_note' === $kind );
 		$date    = $is_note ? self::rehearsal_date_from( $score ) : '';
 
@@ -626,8 +694,12 @@ class ANSP_Scores_Source {
 			'tags'   => $revised ? array( __( 'Updated', 'ans-singers-portal' ) ) : array(),
 			'groups' => array(),
 			'source' => 'scores-mirror',
+			'mime'   => isset( $score['mime'] ) ? (string) $score['mime'] : 'application/pdf',
 			// Read by group-assignments.php. Empty on anything that is not a note.
 			'rehearsal_date' => $date,
+			// Consumed and removed by ANSP_Mirror_Pieces::apply().
+			'_score' => $score,
+			'_kind'  => $kind,
 		);
 	}
 

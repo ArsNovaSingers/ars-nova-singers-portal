@@ -4,7 +4,7 @@ Tags: members, portal, choir, private, materials
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.38.1
+Stable tag: 1.39.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -71,7 +71,7 @@ Since 1.2.0 there are no per-material grants: any logged-in portal member sees e
 
 == Changelog ==
 
-= Unreleased =
+= 1.39.0 =
 * **Each Drive subfolder is its own dropdown.** Jonathan: "folders define dropdown groups." Inside a piece, click tracks, rehearsal tracks and a rehearsal's recordings are now separate lists named after their Drive folders, instead of one Sheet Music and one Audio heap. Folder names read as words (`ClickTracks` and `click-tracks` both show "Click Tracks"); a one- or two-digit number in front (`01 Click Tracks`) orders the dropdowns and is not shown. A composer folder names the piece and is left out of the dropdown's name. Files with no subfolder still group by type. A hand-entered row that links a Drive file takes that file's folder dropdown, so hand-pasted tracks sit in the same list as the rest of their folder. The project screen's box gains a Dropdown column to move a single file.
 * **New subfolders appear on the next Rescan with nothing typed anywhere.** Every scan records the folders it found (`_ansp_mirror_folders`) and the project reads them all. Only a rehearsal-notes folder still needs naming, so dated notes are treated as notes.
 * **Each concert gets its own space in the mirror.** A project that has never published is scanned with a prefix named for the project (`ansp_mirror_prefix`, requires ans-scores-worker 0.7.0), so two concerts with a `Click Tracks` folder no longer see each other's files. Projects that already published (Rivers & Streams, Springs & Gears) keep their paths. `portal/project/<id>/mirror` reports `prefix` and `found_folders` and accepts `prefix`.

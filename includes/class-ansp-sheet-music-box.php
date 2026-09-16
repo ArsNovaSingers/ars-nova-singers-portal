@@ -330,15 +330,24 @@ class ANSP_Sheet_Music_Box {
 		}
 
 		// Scanning downloads and fingerprints every changed file, and these run
-		// to hundreds of megabytes. Minutes, not seconds. Goes through
-		// ANSP_Mirror_Sync so this button, the REST route and the hourly job
-		// all auto-publish exactly the same things (recordings, new notes).
+		// to hundreds of megabytes. Minutes, not seconds. This is the project
+		// screen's Rescan Drive button, and it goes through ANSP_Mirror_Sync
+		// exactly like the Singers Hub button and the REST route: recordings
+		// and new rehearsal notes publish at once, moved files regroup, and an
+		// updated score waits in the list below.
+		if ( function_exists( 'set_time_limit' ) ) {
+			@set_time_limit( 0 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		}
 		$user = wp_get_current_user();
-		$res  = ANSP_Mirror_Sync::scan_project( $post_id, $user->exists() ? $user->user_email : 'hub' );
+		$res  = ANSP_Mirror_Sync::scan_project( $post_id, $user->exists() ? $user->user_email : 'project-screen', ANSP_Mirror_Sync::MAX_ROUNDS );
 		if ( is_wp_error( $res ) ) {
 			wp_send_json_error( array( 'message' => $res->get_error_message() ) );
 		}
-		wp_send_json_success( self::pending_payload( $group, $res['last'] ) );
+		$payload            = self::pending_payload( $group, $res['last'] );
+		$payload['added']   = count( $res['published'] );
+		$payload['moved']   = count( $res['moved'] );
+		$payload['message'] = ANSP_Mirror_Sync::summary_message( $res, 'project' );
+		wp_send_json_success( $payload );
 	}
 
 	/**

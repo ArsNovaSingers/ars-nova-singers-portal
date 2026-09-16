@@ -112,3 +112,7 @@
 @media (max-width: 782px) {
 	.ansp-sm-name input { max-width: none; }
 }
+
+/* 1.39.3: Rescan Drive sits beside the root-folder button. */
+.ansp-sm-actions { display: flex; flex-wrap: wrap; gap: .5em; align-items: center; }
+.ansp-sm-rescan-note { margin-top: -.25em; max-width: 60em; }

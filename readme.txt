@@ -71,6 +71,9 @@ Since 1.2.0 there are no per-material grants: any logged-in portal member sees e
 
 == Changelog ==
 
+= Unreleased =
+* **Rescan Drive is on the project screen, beside the root folder.** Jonathan: the Singers Hub was an odd place for it on its own. The Sheet music box's "Scan this folder" button (a separate step, below) becomes **Rescan Drive**, next to "Change root folder", with the same note as the Hub button. Its old hint "Changes nothing" had been wrong since 1.38.0: a scan publishes new recordings and rehearsal notes at once and, since 1.39.1, regroups moved files. The button now scans in up to six rounds like the Hub button, and reports what happened ("3 new files added. 2 files moved to a different dropdown. 1 updated score is waiting for your approval below."), naming any file it could not read. Both buttons share one message builder, `ANSP_Mirror_Sync::summary_message()`. The Hub button stays.
+
 = 1.39.2 =
 * **Rescan shows a moved file straight away.** 1.39.1 only cleared the Hub's five-minute library cache when a scan published something new. A move publishes nothing, so a file moved into another Drive folder disappeared from the Hub until the cache ran out, then came back under its new dropdown (found on staging with a real Drive move). Every successful scan now clears the cache. The Rescan Drive button also reports moved files ("1 file moved to a different dropdown.") and reloads the page for them, and the scan log records them.
 

@@ -4,7 +4,7 @@ Tags: members, portal, choir, private, materials
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.37.0
+Stable tag: 1.38.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -71,7 +71,7 @@ Since 1.2.0 there are no per-material grants: any logged-in portal member sees e
 
 == Changelog ==
 
-= Unreleased =
+= 1.38.0 =
 * **Rehearsal recordings reach the Hub from Drive, and every mirror file sits under its piece.** Requires ans-scores-worker 0.6.0, which publishes audio alongside scores. On Rivers & Streams the Margutti click tracks, the Tedesco movements and the 8/29 rehearsal take existed only in Tom's Google Doc: the worker threw away every non-PDF it walked, so nothing else could carry them.
 * Mirror files are filed under a piece by a per-project map (`_ansp_mirror_pieces`, keyed by work id): a saved entry wins; rehearsal notes go under "Rehearsal notes", newest first; otherwise a composer or Drive-folder word that names exactly one piece on the project files it there; a recording with no match goes under its Drive folder; anything else is Other materials. Until now each file was its own heading, named after its own filename. Editable on the project screen (Mirror files: piece and label) and over REST: `GET/POST ars-nova/v1 portal/project/<id>/pieces`. A saved entry can also relabel a file, order it, or hide it.
 * A file that a hand-entered row already links from Drive is listed once. A score keeps the hand row's words and is served from the mirror; a recording keeps the hand row as it is.

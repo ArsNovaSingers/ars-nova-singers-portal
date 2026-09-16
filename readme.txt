@@ -71,6 +71,16 @@ Since 1.2.0 there are no per-material grants: any logged-in portal member sees e
 
 == Changelog ==
 
+= Unreleased =
+Fixes from the 2026-09-16 singer access audit (claude/portal/Hub_Assignments_and_Access_Audit_2026-09-16.md).
+* **A login and its singer profile are always linked both ways.** Self-registration, the Users-screen picker and the `singers/link` REST route wrote only the user side, so the profile screen read "— Not linked —" for a working singer; the 2026-08-31 repair fixed the data but not these writers. All writers now go through `ANSP_Profiles::link()`, and a one-way link heals itself the next time the profile is read.
+* **Saving a singer profile no longer unlinks its owner.** The profile screen's "Linked user account" list only offered four roles; Zahnay's role changed to `ans_executive_director`, and the next save of Zahnay's profile quietly removed the link. The list now offers every user, and the link is only changed when that field is on the form. The Users-screen picker also keeps a linked profile that is in the Trash, labelled "(in Trash)".
+* **Comp Tickets shows the right performance times.** Times were printed with `date_i18n()` from a real timestamp, so Oct 10 at 7:30 pm read "October 11, 1:30 am". Now `wp_date()`, here and in the comp ledger. The resend cooldown also works now: it read a site-local time as UTC and never applied.
+* **The comp note is labelled as shown to singers** in the project box, whose description also no longer claims the claim panel is unbuilt.
+* **My Bio saves what is filled in.** Only a missing display name or a mistyped email stops a save; everything else is kept and the singer is told what is still missing ("Saved. Still to add when you can: your phone number, your bio."). Required markers stay; the browser no longer blocks the form.
+* **A profile in the Trash no longer gives music access**, so the Hub and My Bio agree. Staff see a warning on the Users and Singers screens naming any login in that state, and the Users list marks it.
+* **Every piece folds, and Program Materials has Expand all / Collapse all.** Rehearsal notes and Other materials could not be collapsed before, having no dropdowns inside. Jonathan, 2026-09-16.
+
 = 1.39.3 =
 * **Rescan Drive is on the project screen, beside the root folder.** Jonathan: the Singers Hub was an odd place for it on its own. The Sheet music box's "Scan this folder" button (a separate step, below) becomes **Rescan Drive**, next to "Change root folder", with the same note as the Hub button. Its old hint "Changes nothing" had been wrong since 1.38.0: a scan publishes new recordings and rehearsal notes at once and, since 1.39.1, regroups moved files. The button now scans in up to six rounds like the Hub button, and reports what happened ("3 new files added. 2 files moved to a different dropdown. 1 updated score is waiting for your approval below."), naming any file it could not read. Both buttons share one message builder, `ANSP_Mirror_Sync::summary_message()`. The Hub button stays.
 

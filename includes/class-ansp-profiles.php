@@ -157,7 +157,79 @@ class ANSP_Profiles {
 	 * @return int 0 when unlinked.
 	 */
 	public static function get_user_for_profile( $post_id ) {
-		return (int) get_post_meta( (int) $post_id, 'ansp_user_id', true );
+		$post_id = (int) $post_id;
+		$user_id = (int) get_post_meta( $post_id, 'ansp_user_id', true );
+		if ( $user_id || ! $post_id ) {
+			return $user_id;
+		}
+		/*
+		 * 1.39.4: heal a one-way link. Until 1.39.4 self-registration and the
+		 * Users-screen picker wrote only the user side, so the profile screen
+		 * read "— Not linked —" for a singer who could sign in fine, and
+		 * saving that screen could then drop the link altogether. If exactly
+		 * one user points at this profile, that is the owner: write it back.
+		 */
+		$owners = get_users(
+			array(
+				'meta_key'   => 'ansp_singer_profile', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+				'meta_value' => $post_id, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+				'fields'     => 'ID',
+				'number'     => 2,
+			)
+		);
+		if ( 1 === count( $owners ) ) {
+			$user_id = (int) $owners[0];
+			update_post_meta( $post_id, 'ansp_user_id', $user_id );
+		}
+		return $user_id;
+	}
+
+	/**
+	 * Link a login to a singer profile, BOTH ways, in one place.
+	 *
+	 * The link is stored twice on purpose (user meta ansp_singer_profile, post
+	 * meta ansp_user_id) and every writer must set both. Before 1.39.4 three
+	 * writers set only the user side; the 2026-08-31 repair fixed the data
+	 * and the writers kept breaking it. Every writer now calls this.
+	 *
+	 * Clears any stale pointer on either side, so one login has one profile
+	 * and one profile has one login.
+	 *
+	 * @param int $user_id    User.
+	 * @param int $profile_id Singer profile.
+	 * @return bool
+	 */
+	public static function link( $user_id, $profile_id ) {
+		$user_id    = (int) $user_id;
+		$profile_id = (int) $profile_id;
+		if ( ! $user_id || ! $profile_id || ! get_userdata( $user_id ) || 'singer' !== get_post_type( $profile_id ) ) {
+			return false;
+		}
+		$old_profile = (int) get_user_meta( $user_id, 'ansp_singer_profile', true );
+		if ( $old_profile && $old_profile !== $profile_id && $user_id === (int) get_post_meta( $old_profile, 'ansp_user_id', true ) ) {
+			delete_post_meta( $old_profile, 'ansp_user_id' );
+		}
+		$old_user = (int) get_post_meta( $profile_id, 'ansp_user_id', true );
+		if ( $old_user && $old_user !== $user_id && $profile_id === (int) get_user_meta( $old_user, 'ansp_singer_profile', true ) ) {
+			delete_user_meta( $old_user, 'ansp_singer_profile' );
+		}
+		update_user_meta( $user_id, 'ansp_singer_profile', $profile_id );
+		update_post_meta( $profile_id, 'ansp_user_id', $user_id );
+		return true;
+	}
+
+	/**
+	 * Remove a login's link to its profile, both ways.
+	 *
+	 * @param int $user_id User.
+	 */
+	public static function unlink_user( $user_id ) {
+		$user_id    = (int) $user_id;
+		$profile_id = (int) get_user_meta( $user_id, 'ansp_singer_profile', true );
+		if ( $profile_id && $user_id === (int) get_post_meta( $profile_id, 'ansp_user_id', true ) ) {
+			delete_post_meta( $profile_id, 'ansp_user_id' );
+		}
+		delete_user_meta( $user_id, 'ansp_singer_profile' );
 	}
 
 	/**
@@ -271,7 +343,14 @@ class ANSP_Profiles {
 							'selected'          => $linked_user,
 							'show_option_none'  => __( '— Not linked —', 'ans-singers-portal' ),
 							'option_none_value' => 0,
-							'role__in'          => array( 'singer', 'artistic_director', 'personnel_manager', 'administrator' ),
+							/*
+							 * No role filter (1.39.4). The old list named four
+							 * roles; Zahnay became ans_executive_director on
+							 * 2026-09-03, dropped out of it, and the next save of
+							 * Zahnay's profile posted "not linked" and silently
+							 * removed the link. Anyone may sing.
+							 */
+							'orderby'           => 'display_name',
 						)
 					);
 					?>
@@ -368,16 +447,19 @@ class ANSP_Profiles {
 		}
 
 		// ---- User link (both directions) ---------------------------------
-		$new_user = isset( $_POST['ansp_user_id'] ) ? absint( $_POST['ansp_user_id'] ) : 0;
-		$old_user = self::get_user_for_profile( $post_id );
-		if ( $old_user && $old_user !== $new_user ) {
-			delete_user_meta( $old_user, 'ansp_singer_profile' );
-		}
-		if ( $new_user && get_userdata( $new_user ) ) {
-			update_post_meta( $post_id, 'ansp_user_id', $new_user );
-			update_user_meta( $new_user, 'ansp_singer_profile', $post_id );
-		} else {
-			delete_post_meta( $post_id, 'ansp_user_id' );
+		// Only act when the dropdown was actually on the form, so a save from
+		// anywhere else never reads as "unlink".
+		if ( isset( $_POST['ansp_user_id'] ) ) {
+			$new_user = absint( $_POST['ansp_user_id'] );
+			$old_user = self::get_user_for_profile( $post_id );
+			if ( $old_user && $old_user !== $new_user ) {
+				self::unlink_user( $old_user );
+			}
+			if ( $new_user && get_userdata( $new_user ) ) {
+				self::link( $new_user, $post_id );
+			} elseif ( ! $new_user ) {
+				delete_post_meta( $post_id, 'ansp_user_id' );
+			}
 		}
 
 		// ---- Groups -------------------------------------------------------
@@ -530,8 +612,7 @@ class ANSP_Profiles {
 		}
 
 		// Link both directions.
-		update_post_meta( $profile_id, 'ansp_user_id', (int) $user->ID );
-		update_user_meta( $user->ID, 'ansp_singer_profile', $profile_id );
+		self::link( (int) $user->ID, $profile_id );
 
 		// Build the set-password link.
 		$key       = get_password_reset_key( $user );

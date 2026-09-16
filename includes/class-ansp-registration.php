@@ -435,7 +435,7 @@ class ANSP_Registration {
 			);
 			if ( ! is_wp_error( $profile_id ) ) {
 				$profile_id = (int) $profile_id;
-				update_user_meta( $user_id, ANSP_Profile_Link::META, $profile_id );
+				ANSP_Profiles::link( $user_id, $profile_id );
 
 				/*
 				 * Put the singer in the code's group.

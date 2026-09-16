@@ -63,7 +63,7 @@ $ansp_tfmt = get_option( 'time_format' );
 							<?php
 							echo esc_html( $ansp_row['performance'] );
 							if ( $ansp_row['when'] ) {
-								echo ' — ' . esc_html( date_i18n( $ansp_dfmt . ', ' . $ansp_tfmt, $ansp_row['when'] ) );
+								echo ' — ' . esc_html( wp_date( $ansp_dfmt . ', ' . $ansp_tfmt, $ansp_row['when'] ) );
 							}
 							if ( $ansp_row['location'] ) {
 								echo ' · ' . esc_html( $ansp_row['location'] );
@@ -91,7 +91,7 @@ $ansp_tfmt = get_option( 'time_format' );
 						printf(
 							/* translators: %s: the date the comp was sent. */
 							esc_html__( 'Sent %s', 'ans-singers-portal' ),
-							esc_html( $ansp_row['sent'] ? date_i18n( $ansp_dfmt, $ansp_row['sent'] ) : '—' )
+							esc_html( $ansp_row['sent'] ? wp_date( $ansp_dfmt, $ansp_row['sent'] ) : '—' )
 						);
 
 						if ( $ansp_row['resends'] ) {
@@ -100,7 +100,7 @@ $ansp_tfmt = get_option( 'time_format' );
 								/* translators: 1: number of resends, 2: date of the most recent one. */
 								esc_html( _n( 'resent once (%2$s)', 'resent %1$d times (last %2$s)', (int) $ansp_row['resends'], 'ans-singers-portal' ) ),
 								(int) $ansp_row['resends'],
-								esc_html( $ansp_row['last_resent'] ? date_i18n( $ansp_dfmt, $ansp_row['last_resent'] ) : '' )
+								esc_html( $ansp_row['last_resent'] ? wp_date( $ansp_dfmt, $ansp_row['last_resent'] ) : '' )
 							);
 						}
 						?>

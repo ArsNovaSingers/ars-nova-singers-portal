@@ -49,6 +49,7 @@ endif;
 	?>
 	<form class="ansp-bio-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" enctype="multipart/form-data">
 		<input type="hidden" name="action" value="ansp_save_bio" />
+		<p class="ansp-field-hint"><?php esc_html_e( 'Fields marked * complete your profile for the roster and the website. You can save at any time; we will tell you what is still missing.', 'ans-singers-portal' ); ?></p>
 		<?php wp_nonce_field( 'ansp_save_bio', 'ansp_bio_nonce' ); ?>
 
 		<div class="ansp-bio-headshot">
@@ -58,7 +59,7 @@ endif;
 				<div class="ansp-headshot ansp-headshot--placeholder" aria-hidden="true"></div>
 			<?php endif; ?>
 			<label class="ansp-field">
-				<span class="ansp-field-label"><?php esc_html_e( 'Headshot (JPG/PNG, required)', 'ans-singers-portal' ); ?> <em>*</em></span>
+				<span class="ansp-field-label"><?php esc_html_e( 'Headshot (JPG/PNG)', 'ans-singers-portal' ); ?> <em>*</em></span>
 				<input type="file" name="ansp_headshot" accept="image/jpeg,image/png,image/gif,image/webp" />
 			</label>
 		</div>
@@ -95,7 +96,7 @@ endif;
 						type="<?php echo esc_attr( $ansp_field['type'] ); ?>"
 						name="ansp_field_<?php echo esc_attr( $ansp_key ); ?>"
 						value="<?php echo esc_attr( $ansp_value ); ?>"
-						<?php echo $ansp_required ? 'required' : ''; ?>
+						<?php /* 1.39.4: not browser-required - a partial save is allowed and the singer is told what is missing. */ ?>
 					/>
 				</label>
 				<?php if ( ! empty( $ansp_field['private_toggle'] ) ) : ?>
@@ -143,7 +144,6 @@ endif;
 				<input
 					type="number"
 					name="ansp_year_joined"
-					required
 					min="<?php echo esc_attr( (string) ansp_founding_year() ); ?>"
 					max="<?php echo esc_attr( current_time( 'Y' ) ); ?>"
 					step="1"
@@ -203,7 +203,7 @@ endif;
 		<div class="ansp-field ansp-field--bio">
 			<label>
 				<span class="ansp-field-label"><?php esc_html_e( 'Bio', 'ans-singers-portal' ); ?> <em>*</em></span>
-				<textarea id="ansp_bio" name="ansp_bio" rows="6" required><?php echo esc_textarea( $ansp_bio_text ); ?></textarea>
+				<textarea id="ansp_bio" name="ansp_bio" rows="6"><?php echo esc_textarea( $ansp_bio_text ); ?></textarea>
 			</label>
 
 			<div class="ansp-ai-compose">

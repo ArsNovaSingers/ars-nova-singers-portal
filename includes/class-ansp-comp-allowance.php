@@ -214,7 +214,7 @@ class ANSP_Comp_Allowance {
 			. '</p>';
 
 		echo '<p><label for="' . esc_attr( self::META_NOTE ) . '">'
-			. esc_html__( 'Note (optional)', 'ans-singers-portal' )
+			. esc_html__( 'Note shown to singers (optional)', 'ans-singers-portal' )
 			. '</label><br />';
 
 		printf(
@@ -226,7 +226,7 @@ class ANSP_Comp_Allowance {
 		echo '</p>';
 
 		echo '<p class="description">'
-			. esc_html__( 'Singers cannot claim these yet - the claim panel is not built. Setting a number now is safe and is what it will read.', 'ans-singers-portal' )
+			. esc_html__( 'Singers claim these on the Comp Tickets tab of the Singers Hub, and they see this note above the form. Keep internal notes elsewhere.', 'ans-singers-portal' )
 			. '</p>';
 	}
 

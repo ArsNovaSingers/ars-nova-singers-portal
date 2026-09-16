@@ -4,7 +4,7 @@ Tags: members, portal, choir, private, materials
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.39.0
+Stable tag: 1.39.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -71,7 +71,7 @@ Since 1.2.0 there are no per-material grants: any logged-in portal member sees e
 
 == Changelog ==
 
-= Unreleased =
+= 1.39.1 =
 * **Moving a file into another Drive folder moves it to that dropdown on the next Rescan.** Requires ans-scores-worker 0.7.1, which records the folder a published file now sits in (a Drive move changes neither the bytes nor the modified time, so it used to go unnoticed). The published path does not change - a singer's device keeps the file it has - only the grouping follows Drive. A file is also found under its new folder, so emptying a folder does not take its files off the Hub.
 
 = 1.39.0 =

@@ -155,6 +155,7 @@ class ANSP_Mirror_Sync {
 			'folder_id'   => $folder,
 			'rounds'      => 0,
 			'published'   => array(),
+			'moved'       => array(),
 			'staged'      => array(),
 			'problems'    => array(),
 			'remaining'   => 0,
@@ -195,6 +196,11 @@ class ANSP_Mirror_Sync {
 				update_post_meta( $project_id, ANSP_Scores_Source::META_FOUND, $found );
 				$summary['folders'] = $found;
 			}
+			foreach ( (array) ( isset( $res['moved'] ) ? $res['moved'] : array() ) as $move ) {
+				if ( isset( $move['canonical'] ) ) {
+					$summary['moved'][] = (string) $move['canonical'];
+				}
+			}
 			foreach ( (array) ( isset( $res['results'] ) ? $res['results'] : array() ) as $row ) {
 				$name    = isset( $row['source_name'] ) ? (string) $row['source_name'] : '';
 				$outcome = isset( $row['outcome'] ) ? (string) $row['outcome'] : '';
@@ -215,8 +221,12 @@ class ANSP_Mirror_Sync {
 			}
 		}
 
-		if ( $summary['published'] ) {
-			// Singers should see new files on their next page load, not in five minutes.
+		if ( $summary['rounds'] > 0 ) {
+			// Every scan a person asked for is shown on the next page load, not
+			// in five minutes. Until 1.39.2 only a scan that published cleared
+			// the library cache, so a file moved in Drive vanished from the Hub
+			// until the cache ran out: a move publishes nothing, and the old
+			// cached library still said the file was in its old folder.
 			ANSP_Scores_Source::bust_cache();
 		}
 		self::log( $project_id, $summary, $actor );
@@ -241,6 +251,7 @@ class ANSP_Mirror_Sync {
 			$entry['error'] = $result->get_error_message();
 		} else {
 			$entry['published'] = $result['published'];
+			$entry['moved']     = isset( $result['moved'] ) ? $result['moved'] : array();
 			$entry['staged']    = count( $result['staged'] );
 			$entry['problems']  = $result['problems'];
 			$entry['remaining'] = $result['remaining'];
@@ -528,11 +539,16 @@ class ANSP_Mirror_Sync {
 		}
 
 		$added   = count( $result['published'] );
+		$moved   = count( $result['moved'] );
 		$waiting = count( $result['staged'] );
 		$parts   = array();
 		if ( $added ) {
 			/* translators: %d: number of files */
 			$parts[] = sprintf( _n( '%d new file added.', '%d new files added.', $added, 'ans-singers-portal' ), $added );
+		}
+		if ( $moved ) {
+			/* translators: %d: number of files */
+			$parts[] = sprintf( _n( '%d file moved to a different dropdown.', '%d files moved to a different dropdown.', $moved, 'ans-singers-portal' ), $moved );
 		}
 		if ( $waiting ) {
 			/* translators: %d: number of files */
@@ -551,9 +567,10 @@ class ANSP_Mirror_Sync {
 		wp_send_json_success(
 			array(
 				'added'   => $added,
+				'moved'   => $moved,
 				'waiting' => $waiting,
 				'message' => implode( ' ', $parts ),
-				'reload'  => $added > 0,
+				'reload'  => ( $added + $moved ) > 0,
 			)
 		);
 	}

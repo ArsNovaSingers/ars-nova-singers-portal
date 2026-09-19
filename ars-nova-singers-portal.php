@@ -76,6 +76,7 @@ require_once ANSP_DIR . 'includes/class-ansp-project-ticketing.php';
  */
 require_once ANSP_DIR . 'includes/class-ansp-event-venue.php';
 require_once ANSP_DIR . 'includes/class-ansp-comp-claim.php';
+require_once ANSP_DIR . 'includes/class-ansp-free-allocation.php';
 
 /**
  * Boot the plugin.
@@ -117,6 +118,7 @@ function ansp_init() {
 	ANSP_Project_Ticketing::init();  // Project <-> Tickera event_category, auto-linked.
 	ANSP_Event_Venue::init();  // Performance -> Venue, so capacity has a path.
 	ANSP_Comp_Claim::init();  // Singers claim their comps from the portal.
+	ANSP_Free_Allocation::init();  // Free student/youth seats per performance, capped on the Project.
 	new ANSP_Project_Meta();
 	new ANSP_Profiles();
 	new ANSP_Login();

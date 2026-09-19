@@ -4,7 +4,7 @@ Tags: members, portal, choir, private, materials
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.40.0
+Stable tag: 1.41.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -71,7 +71,7 @@ Since 1.2.0 there are no per-material grants: any logged-in portal member sees e
 
 == Changelog ==
 
-= Unreleased =
+= 1.41.0 =
 * **Free ticket allocation, per performance, edited on the Project.** Student and youth tickets are $0 for the 2026/27 season, so each performance now carries a hard total of free seats per tier. The number lives on the `tc_events` performance (`ansp_event_free_student` / `ansp_event_free_youth`) because stock is per product and each night has its own room; the editor is one table on the project edit screen, so a whole production is set from one place rather than by opening every performance.
 * **Blank means unlimited. 0 means nobody.** Those are different answers and both are kept. The value is handled as a string and never cast through `max( 0, (int) $v )` — which is deliberately NOT what `ANSP_Comp_Allowance` does, where a blank field legitimately means zero. Three sibling fields on this install now use three different conventions for an empty box; the class docblock says so in full.
 * Stock is **recomputed** as (total − already issued) on every save rather than read back, so re-saving a screen after tickets have sold cannot quietly reset an allocation to its starting number.
